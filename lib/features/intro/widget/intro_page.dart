@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
-import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/constants.dart';
@@ -185,40 +184,17 @@ class IntroPage extends HookConsumerWidget with PresLogger {
   Future<void> autoSelectRegion(WidgetRef ref) async {
     try {
       final countryCode = RegionDetector.detect();
-      final regionLocale = _getRegionLocale(countryCode);
+      final regionLocale = regionLocaleFor(countryCode);
       loggy.debug('Timezone Region: ${regionLocale.region} Locale: ${regionLocale.locale}');
       await ref.read(ConfigOptions.region.notifier).update(regionLocale.region);
       await ref.watch(ConfigOptions.directDnsAddress.notifier).reset();
       await ref.read(localePreferencesProvider.notifier).changeLocale(regionLocale.locale);
-      return;
     } catch (e) {
-      loggy.warning('Could not get the local country code based on timezone', e);
-    }
-
-    try {
-      final DioHttpClient client = DioHttpClient(
-        timeout: const Duration(seconds: 2),
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-        debug: true,
-      );
-      final response = await client.get<Map<String, dynamic>>('https://api.ip.sb/geoip/');
-
-      if (response.statusCode == 200) {
-        final jsonData = response.data!;
-        final regionLocale = _getRegionLocale(jsonData['country_code']?.toString() ?? "");
-
-        loggy.debug('Region: ${regionLocale.region} Locale: ${regionLocale.locale}');
-        await ref.read(ConfigOptions.region.notifier).update(regionLocale.region);
-        await ref.read(localePreferencesProvider.notifier).changeLocale(regionLocale.locale);
-      } else {
-        loggy.warning('Request failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      loggy.warning('Could not get the local country code from ip');
+      loggy.warning('Could not detect the region from time zone and locale', e);
     }
   }
 
-  RegionLocale _getRegionLocale(String country) {
+  static RegionLocale regionLocaleFor(String country) {
     switch (country.toUpperCase()) {
       case "IR":
         return RegionLocale(Region.ir, AppLocale.fa);
@@ -247,15 +223,26 @@ class RegionLocale {
 
 class RegionDetector {
   /// Returns: 'IR' | 'AF' | 'CN' | 'TR' | 'RU' | 'BR' | 'US'
+  /// Uses only the device time zone and locale. Makes no network call.
   static String detect() {
     final now = DateTime.now();
-    final offset = now.timeZoneOffset.inMinutes;
-    final tz = now.timeZoneName.toLowerCase().trim();
+    return detectFrom(
+      offsetMinutes: now.timeZoneOffset.inMinutes,
+      tzName: now.timeZoneName,
+      localeName: _platformLocaleName(),
+    );
+  }
+
+  static String detectFrom({required int offsetMinutes, required String tzName, required String localeName}) {
+    final offset = offsetMinutes;
+    final tz = tzName.toLowerCase().trim();
+    final (lang, country) = _parseLocale(localeName);
+
+    if (lang == 'tr' || country == 'TR') return 'TR';
 
     if (offset == 210) return 'IR';
 
     if (offset == 270) {
-      final (_, country) = _parseLocale();
       return country == 'IR' ? 'IR' : 'AF';
     }
 
@@ -265,7 +252,15 @@ class RegionDetector {
     final candidates = _candidatesForOffset(offset);
     if (candidates.isEmpty) return 'US';
 
-    return _resolveByLocale(candidates);
+    return _resolveByLocale(candidates, lang, country);
+  }
+
+  static String _platformLocaleName() {
+    try {
+      return Platform.localeName;
+    } catch (_) {
+      return 'en';
+    }
   }
 
   static String? _fromTzName(String tz, int offset) {
@@ -345,9 +340,7 @@ class RegionDetector {
 
   static const _brOffsets = {-120, -180, -240, -300};
 
-  static String _resolveByLocale(Set<String> candidates) {
-    final (lang, country) = _parseLocale();
-
+  static String _resolveByLocale(Set<String> candidates, String lang, String? country) {
     if (country != null && candidates.contains(country)) {
       return country;
     }
@@ -360,9 +353,9 @@ class RegionDetector {
     return 'US';
   }
 
-  static (String, String?) _parseLocale() {
+  static (String, String?) _parseLocale(String localeName) {
     try {
-      final parts = Platform.localeName.split(RegExp(r'[_\-.]'));
+      final parts = localeName.split(RegExp(r'[_\-.]'));
       final lang = parts.first.toLowerCase();
 
       String? country;

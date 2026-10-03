@@ -13,7 +13,6 @@ import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/hiddifycore/init_signal.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:in_app_review/in_app_review.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -34,13 +33,6 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       if (previous case AsyncData(:final value) when !value.isConnected) {
         if (next case AsyncData(value: final Connected _)) {
           await ref.read(hapticServiceProvider.notifier).heavyImpact();
-
-          if (Platform.isAndroid && !ref.read(Preferences.storeReviewedByUser)) {
-            if (await InAppReview.instance.isAvailable()) {
-              InAppReview.instance.requestReview();
-              ref.read(Preferences.storeReviewedByUser.notifier).update(true);
-            }
-          }
         }
       }
     });

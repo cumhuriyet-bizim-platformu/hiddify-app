@@ -88,7 +88,6 @@ dependencies:
   #flutter_easy_permission: ^1.1.2
   # flutter_easy_permission:
   #   git: https://github.com/MichaelStH/flutter_easy_permission.git
-  in_app_review: ^2.0.10
   # circle_flags: ^4.0.2
   circle_flags:
     git: https://github.com/hiddify-com/flutter_circle_flags.git
@@ -133,8 +132,8 @@ dependencies:
   dependency_validator: ^5.0.2
 
 dev_dependencies:
-  # flutter_test:
-  #   sdk: flutter
+  flutter_test:
+    sdk: flutter
   lint: ^2.3.0
   build_web_compilers: ^4.0.11
   build_runner: ^2.4.13
