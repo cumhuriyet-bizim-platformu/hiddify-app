@@ -11,6 +11,7 @@ on:
     branches:
        - main
        - dev
+       - derbent
        - android-fix-action-bug
        - new-design-v2 
     paths-ignore:

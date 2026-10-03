@@ -5,7 +5,10 @@ analyzer:
     - custom_lint
   exclude:
     - "hiddify-core/**"
-    - "**.g.dart"
+    - "packages/**"
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mapper.dart"
     - "lib/gen/**"
   errors:
     invalid_annotation_target: ignore

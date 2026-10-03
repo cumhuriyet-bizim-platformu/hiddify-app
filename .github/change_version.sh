@@ -2,7 +2,7 @@
 SED() { [[ "$OSTYPE" == "darwin"* ]] && sed -i '' "$@" || sed -i "$@"; }
 echo "previous version was $(git describe --tags $(git rev-list --tags --max-count=1))"
 echo "WARNING: This operation will creates version tag and push to github"
-if [ "$(curl -o /dev/null -I -s -w "%{http_code}" https://github.com/hiddify/hiddify-core/releases/download/v${CORE_VERSION}/hiddify-core-linux-amd64.tar.gz)" = "404" ]; then 
+if [ "$(curl -o /dev/null -I -s -L -w "%{http_code}" https://github.com/cumhuriyet-bizim-platformu/derbent-releases/releases/download/core-v${CORE_VERSION}-derbent.${CORE_DERBENT}/hiddify-lib-linux-amd64.tar.gz)" = "404" ]; then 
     echo "Core v${CORE_VERSION} not Found"; 
     exit 3; 
 fi
