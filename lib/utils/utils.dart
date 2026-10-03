@@ -12,4 +12,5 @@ export 'placeholders.dart';
 export 'platform_utils.dart';
 export 'text_utils.dart';
 export 'uri_utils.dart';
+export 'url_mask.dart';
 export 'validators.dart';
