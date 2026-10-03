@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
-import 'package:hiddify/core/analytics/analytics_controller.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/core/localization/locale_preferences.dart';
 import 'package:hiddify/core/localization/translations.dart';
@@ -107,7 +106,6 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                       await ref.read(ConfigOptions.directDnsAddress.notifier).reset();
                     },
                   ),
-                  const EnableAnalyticsPrefTile(),
                   const Gap(24),
                   Focus(
                     focusNode: focusNodes[IntroConst.termsAndConditionsKey],
@@ -178,14 +176,6 @@ class IntroPage extends HookConsumerWidget with PresLogger {
         onPressed: () async {
           if (isStarting.value) return;
           isStarting.value = true;
-          if (!ref.read(analyticsControllerProvider).requireValue) {
-            loggy.info("disabling analytics per user request");
-            try {
-              await ref.read(analyticsControllerProvider.notifier).disableAnalytics();
-            } catch (error, stackTrace) {
-              loggy.error("could not disable analytics", error, stackTrace);
-            }
-          }
           await ref.read(Preferences.introCompleted.notifier).update(true);
         },
       ),
