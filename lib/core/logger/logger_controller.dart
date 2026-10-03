@@ -19,18 +19,20 @@ class LoggerController extends LoggyPrinter with InfraLogger {
     Loggy.initLoggy(logPrinter: const ConsolePrinter());
   }
 
+  /// Default app log level. The core log level stays `warn` (ConfigOptions.logLevel).
+  static const defaultLogLevel = LogLevel.warning;
+
   static void init(String appLogPath) {
     _instance = LoggerController(const ConsolePrinter(), {"app": kIsWeb ? const ConsolePrinter() : FileLogPrinter(appLogPath)});
-    Loggy.initLoggy(logPrinter: _instance);
+    Loggy.initLoggy(logPrinter: _instance, logOptions: LogOptions(defaultLogLevel));
   }
 
   static Future<void> postInit(bool debugMode) async {
-    final logLevel = debugMode && false ? LogLevel.all : LogLevel.info;
     final logToFile = debugMode || (!Platform.isAndroid && !Platform.isIOS);
 
     if (!logToFile || kIsWeb) _instance.removePrinter("app");
 
-    Loggy.initLoggy(logPrinter: _instance, logOptions: LogOptions(logLevel));
+    Loggy.initLoggy(logPrinter: _instance, logOptions: LogOptions(defaultLogLevel));
   }
 
   void removePrinter(String name) {
