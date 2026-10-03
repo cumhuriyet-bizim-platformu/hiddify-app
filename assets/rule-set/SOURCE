@@ -1,5 +1,5 @@
 Derbent snapshot of sing-box rule-sets for the app bundle.
-Upstream: hiddify/hiddify-geo, branch rule-set (GPL-3.0, see ../LICENSE).
+Upstream: hiddify/hiddify-geo, branch rule-set (GPL-3.0; license text: data/hiddify-geo/LICENSE in the Derbent source repo).
 Upstream commit: 4918867a4d19ae28ee9e7e9da483539c18c20d77 (2026-10-02T15:30:50Z).
 The upstream branch is rebuilt from Chocolate4U/Iran-sing-box-rules (branch rule-set).
 Files: the six block lists the core references, and country/geoip-tr.srs.
