@@ -9,7 +9,8 @@ import 'package:hiddify/features/app_update/model/remote_version_entity.dart';
 import 'package:hiddify/utils/utils.dart';
 
 abstract interface class AppUpdateRepository {
-  TaskEither<AppUpdateFailure, RemoteVersionEntity> getLatestVersion({
+  /// Right(null) means no matching app release exists (treated as "no update").
+  TaskEither<AppUpdateFailure, RemoteVersionEntity?> getLatestVersion({
     bool includePreReleases = false,
     Release release = Release.general,
   });
@@ -21,7 +22,7 @@ class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppU
   final DioHttpClient httpClient;
 
   @override
-  TaskEither<AppUpdateFailure, RemoteVersionEntity> getLatestVersion({
+  TaskEither<AppUpdateFailure, RemoteVersionEntity?> getLatestVersion({
     bool includePreReleases = false,
     Release release = Release.general,
   }) {
@@ -29,7 +30,7 @@ class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppU
       if (!release.allowCustomUpdateChecker) {
         throw Exception("custom update checkers are not supported");
       }
-      final response = await httpClient.get<List>(Constants.githubReleasesApiUrl);
+      final response = await httpClient.get<List>('${Constants.githubReleasesApiUrl}?per_page=100');
       if (response.statusCode != 200 || response.data == null) {
         loggy.warning("failed to fetch latest version info");
         return left(const AppUpdateFailure.unexpected());
@@ -39,12 +40,10 @@ class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppU
           .cast<Map<String, dynamic>>()
           .where(GithubReleaseParser.isAppRelease)
           .map(GithubReleaseParser.parse);
-      late RemoteVersionEntity latest;
-      if (includePreReleases) {
-        latest = releases.first;
-      } else {
-        latest = releases.firstWhere((e) => e.preRelease == false);
-      }
+      final RemoteVersionEntity? latest = includePreReleases
+          ? releases.firstOrNull
+          : releases.where((e) => e.preRelease == false).firstOrNull;
+      if (latest == null) loggy.info("no app release found in the fetched releases");
       return right(latest);
     }, AppUpdateFailure.unexpected);
   }

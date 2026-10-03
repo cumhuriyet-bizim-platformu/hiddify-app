@@ -140,9 +140,10 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       await ref
           .read(dialogNotifierProvider.notifier)
           .showCustomAlertFromErr(err.present(ref.read(translationsProvider).requireValue));
-      loggy.warning(err);
       if (err.toString().contains("panic")) {
         loggy.error("core panic: $err");
+      } else {
+        loggy.warning(err);
       }
       await ref.read(Preferences.startedByUser.notifier).update(false);
       state = AsyncError(err, StackTrace.current);
