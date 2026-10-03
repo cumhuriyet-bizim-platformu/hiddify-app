@@ -16,7 +16,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 part 'connection_notifier.g.dart';
 
@@ -151,7 +150,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
           .showCustomAlertFromErr(err.present(ref.read(translationsProvider).requireValue));
       loggy.warning(err);
       if (err.toString().contains("panic")) {
-        await Sentry.captureException(Exception(err.toString()));
+        loggy.error("core panic: $err");
       }
       await ref.read(Preferences.startedByUser.notifier).update(false);
       state = AsyncError(err, StackTrace.current);

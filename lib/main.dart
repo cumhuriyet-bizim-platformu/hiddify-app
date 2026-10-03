@@ -6,7 +6,6 @@ import 'package:hiddify/core/model/environment.dart';
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  // final widgetsBinding = SentryWidgetsFlutterBinding.ensureInitialized();
   // debugPaintSizeEnabled = true;
 
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

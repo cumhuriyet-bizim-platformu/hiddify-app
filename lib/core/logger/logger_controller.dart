@@ -33,11 +33,6 @@ class LoggerController extends LoggyPrinter with InfraLogger {
     Loggy.initLoggy(logPrinter: _instance, logOptions: LogOptions(logLevel));
   }
 
-  void addPrinter(String name, LoggyPrinter printer) {
-    loggy.debug("adding [$name] printer");
-    otherPrinters.putIfAbsent(name, () => printer);
-  }
-
   void removePrinter(String name) {
     loggy.debug("removing [$name] printer");
     final printer = otherPrinters[name];

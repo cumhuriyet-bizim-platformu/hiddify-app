@@ -52,8 +52,6 @@ dependencies:
   url_launcher: ^6.2.5
   vclibs: ^0.1.2
   launch_at_startup: ^0.5.1
-  sentry_flutter: ^8.14.0
-  sentry_dart_plugin: ^2.4.1
   sqlite3_flutter_libs: ^0.5.28
 
   path: ^1.9.0
@@ -188,10 +186,3 @@ ffigen:
   headers:
     entry-points:
       - "hiddify-core/bin/desktop.h"
-
-sentry:
-  upload_debug_symbols: true
-  upload_source_maps: true
-  upload_sources: true
-  log_level: info
-  ignore_missing: true
