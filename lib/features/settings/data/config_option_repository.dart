@@ -2,6 +2,8 @@ import 'package:dartx/dartx.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/model/optional_range.dart';
 import 'package:hiddify/core/model/region.dart';
+import 'package:hiddify/core/preferences/clash_api_secret.dart';
+import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
 import 'package:hiddify/core/utils/json_converters.dart';
 import 'package:hiddify/core/utils/preferences_utils.dart';
@@ -168,6 +170,12 @@ abstract class ConfigOptions {
     validator: (value) => isPort(value.toString()),
   );
 
+  /// Random per-install secret of the local Clash API. Generated on first run,
+  /// never exported, imported or reset with the other options.
+  static final clashApiSecret = Provider<String>(
+    (ref) => readOrCreateClashApiSecret(ref.watch(sharedPreferencesProvider).requireValue),
+  );
+
   static final bypassLan = PreferencesNotifier.create<bool, bool>("bypass-lan", false);
 
   static final allowConnectionFromLan = PreferencesNotifier.create<bool, bool>("allow-connection-from-lan", false);
@@ -300,6 +308,7 @@ abstract class ConfigOptions {
     "warp2.access-token",
     "warp2.account-id",
     "warp2.wireguard-config",
+    "web-secret",
   };
 
   static final Map<String, StateNotifierProvider<PreferencesNotifier, dynamic>> preferences = {
@@ -432,6 +441,7 @@ abstract class ConfigOptions {
       urlTestInterval: ref.watch(urlTestInterval),
       enableClashApi: ref.watch(enableClashApi),
       clashApiPort: ref.watch(clashApiPort),
+      webSecret: ref.watch(clashApiSecret),
       enableTun: mode == ServiceMode.tun,
       // enableTunService: mode == false, //ServiceMode.tunService,
       setSystemProxy: mode == ServiceMode.systemProxy,
