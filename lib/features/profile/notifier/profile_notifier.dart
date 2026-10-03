@@ -1,22 +1,18 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
-import 'package:hiddify/core/http_client/http_client_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/model/failures.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
-import 'package:hiddify/features/profile/add/model/free_profiles_model.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
 import 'package:hiddify/features/profile/data/profile_repository.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
-import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/utils/riverpod_utils.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -165,16 +161,6 @@ class UpdateProfileNotifier extends _$UpdateProfileNotifier with AppLogger {
 }
 
 @riverpod
-class FreeSwitchNotifier extends _$FreeSwitchNotifier {
-  @override
-  bool build() {
-    return false;
-  }
-
-  Future<void> onChange(bool value) async => state = value;
-}
-
-@riverpod
 class AddProfilePageNotifier extends _$AddProfilePageNotifier {
   @override
   AddProfilePages build() => AddProfilePages.options;
@@ -184,25 +170,3 @@ class AddProfilePageNotifier extends _$AddProfilePageNotifier {
 }
 
 enum AddProfilePages { options, manual }
-
-@riverpod
-class FreeProfilesNotifier extends _$FreeProfilesNotifier {
-  @override
-  Future<List<FreeProfile>> build() async {
-    final httpClient = ref.watch(httpClientProvider);
-    final res = await httpClient.get(
-      'https://raw.githubusercontent.com/hiddify/hiddify-app/refs/heads/main/test.configs/free_configs',
-    );
-    if (res.statusCode == 200) {
-      return FreeProfilesModel.fromJson(jsonDecode(res.data.toString()) as Map<String, dynamic>).profiles;
-    }
-    return <FreeProfile>[];
-  }
-}
-
-@riverpod
-Future<List<FreeProfile>> freeProfilesFilteredByRegion(Ref ref) async {
-  final freeProfiles = await ref.watch(freeProfilesNotifierProvider.future);
-  final region = ref.watch(ConfigOptions.region);
-  return freeProfiles.where((e) => e.region.contains(region.name) || e.region.isEmpty).toList();
-}

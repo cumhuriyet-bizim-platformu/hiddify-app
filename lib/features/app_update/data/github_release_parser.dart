@@ -3,6 +3,11 @@ import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/features/app_update/model/remote_version_entity.dart';
 
 abstract class GithubReleaseParser {
+  static final _appTag = RegExp(r'^v\d+\.\d+\.\d+');
+
+  /// derbent-releases also holds core-v… and server-v… releases; only app tags (v<x.y.z>) count.
+  static bool isAppRelease(Map<String, dynamic> json) => _appTag.hasMatch(json['tag_name'] as String? ?? '');
+
   static RemoteVersionEntity parse(Map<String, dynamic> json) {
     final fullTag = json['tag_name'] as String;
     final fullVersion = fullTag.removePrefix("v").split("-").first.split("+");
