@@ -26,13 +26,6 @@
     </p>
   </description>
 
-  <screenshots>
-    <screenshot type="default">
-      <image>https://hiddify.com/assets/hiddify-next-mobile.svg</image>
-      <caption>Main Interface of Hiddify</caption>
-    </screenshot>
-  </screenshots>
-
   <launchable type="desktop-id">hiddify.desktop</launchable>
 
   <icon type="stock">hiddify</icon>
@@ -62,9 +55,8 @@
     <mime-type>x-scheme-handler/sing-box</mime-type>
   </mime-types>
 
-  <url type="homepage">https://hiddify.com</url>
-  <url type="bugtracker">https://github.com/hiddify/hiddify-app/issues</url>
-  <url type="help">https://docs.hiddify.com</url>
+  <url type="homepage">https://github.com/cumhuriyet-bizim-platformu/hiddify-app</url>
+  <url type="bugtracker">https://github.com/cumhuriyet-bizim-platformu/hiddify-app/issues</url>
 
   <provides>
     <binary>hiddify</binary>

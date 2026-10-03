@@ -106,26 +106,28 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                     },
                   ),
                   const Gap(24),
-                  Focus(
-                    focusNode: focusNodes[IntroConst.termsAndConditionsKey],
-                    onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.termsAndConditionsKey),
-                    child: Text.rich(
-                      t.intro.termsAndPolicyCaution(
-                        tap: (text) => TextSpan(
-                          text: text,
-                          style: TextStyle(
-                            color: focusStates[IntroConst.termsAndConditionsKey]!.value ? Colors.green : Colors.blue,
+                  if (Constants.termsAndConditionsUrl.isNotEmpty) ...[
+                    Focus(
+                      focusNode: focusNodes[IntroConst.termsAndConditionsKey],
+                      onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.termsAndConditionsKey),
+                      child: Text.rich(
+                        t.intro.termsAndPolicyCaution(
+                          tap: (text) => TextSpan(
+                            text: text,
+                            style: TextStyle(
+                              color: focusStates[IntroConst.termsAndConditionsKey]!.value ? Colors.green : Colors.blue,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
+                              },
                           ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
-                            },
                         ),
+                        style: theme.textTheme.bodySmall,
                       ),
-                      style: theme.textTheme.bodySmall,
                     ),
-                  ),
-                  const Gap(8),
+                    const Gap(8),
+                  ],
                   Focus(
                     focusNode: focusNodes[IntroConst.githubKey],
                     onKeyEvent: (node, event) => _handleKeyEvent(event, IntroConst.githubKey),
