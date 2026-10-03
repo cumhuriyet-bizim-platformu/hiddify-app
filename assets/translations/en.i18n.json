@@ -215,8 +215,6 @@
           "light": "Light mode",
           "black": "Black mode"
         },
-        "enableAnalytics": "Enable analytics",
-        "enableAnalyticsMsg": "Give permission to collect analytics and send crash reports to improve the app",
         "autoIpCheck": "Automatically check connection IP",
         "dynamicNotification": "Display speed in notification",
         "hapticFeedback": "Haptic feedback",
@@ -643,7 +641,7 @@
       "msg": "Let's get started by adding a connection profile that includes your VPN connection details.\n\nDon’t have a VPN server yet? No worries—just follow the tutorial below to set one up quickly and for free.",
       "helpBtn": {
         "label": "Show me how",
-        "url": "https://hiddify.com/manager/"
+        "url": ""
       }
     },
     "unknownDomainsWarning": {

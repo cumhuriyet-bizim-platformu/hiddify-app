@@ -215,8 +215,6 @@
           "light": "Modo claro",
           "black": "Modo negro"
         },
-        "enableAnalytics": "Habilitar análisis",
-        "enableAnalyticsMsg": "Dar permiso para recopilar análisis y enviar informes de fallos para mejorar la aplicación",
         "autoIpCheck": "Comprobar IP de conexión automáticamente",
         "dynamicNotification": "Mostrar velocidad en la notificación",
         "hapticFeedback": "Respuesta háptica",
@@ -643,7 +641,7 @@
       "msg": "Para empezar, añade un perfil de conexión que incluya los detalles de tu conexión VPN.\n\n¿Aún no tienes un servidor VPN? No te preocupes, sigue el tutorial a continuación para configurar uno rápidamente y de forma gratuita.",
       "helpBtn": {
         "label": "Muéstrame cómo",
-        "url": "https://hiddify.com/manager/"
+        "url": ""
       }
     },
     "unknownDomainsWarning": {

@@ -9,9 +9,10 @@ abstract class Constants {
   static const githubReleasesApiUrl = "https://api.github.com/repos/hiddify/hiddify-next/releases";
   static const githubLatestReleaseUrl = "https://github.com/hiddify/hiddify-app/releases/latest";
   static const appCastUrl = "https://raw.githubusercontent.com/hiddify/hiddify-next/main/appcast.xml";
-  static const telegramChannelUrl = "https://t.me/hiddify";
-  static const privacyPolicyUrl = "https://hiddify.com/privacy-policy/";
-  static const termsAndConditionsUrl = "https://hiddify.com/terms/";
+  // Empty by default; the UI hides these links when empty. Set per build with
+  // --dart-define=privacy_url=... / --dart-define=terms_url=...
+  static const privacyPolicyUrl = String.fromEnvironment("privacy_url");
+  static const termsAndConditionsUrl = String.fromEnvironment("terms_url");
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 }

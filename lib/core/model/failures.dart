@@ -18,7 +18,7 @@ mixin UnexpectedFailure {
 /// and should be logged, eg missing permissions
 mixin ExpectedMeasuredFailure {}
 
-/// failures ignored by analytics service etc.
+/// failures that are only logged locally etc.
 mixin ExpectedFailure {}
 
 extension ErrorPresenter on TranslationsEn {
