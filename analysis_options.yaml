@@ -3,6 +3,7 @@ include: package:lint/strict.yaml
 analyzer:
   exclude:
     - "hiddify-core/**"
+    - "packages/**"
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "**/*.mapper.dart"

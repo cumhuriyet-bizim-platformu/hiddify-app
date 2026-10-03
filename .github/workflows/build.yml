@@ -93,15 +93,7 @@ jobs:
           #   aarch: arm64
           #   targets: deb,gz
 
-          # - platform: linux-amd64-musl
-          #   os: ubuntu-22.04
-          #   aarch: amd64
-          #   targets: deb,gz
 
-          # - platform: linux-arm64-musl
-          #   os: ubuntu-24.04-arm
-          #   aarch: arm64
-          #   targets: deb,gz
             
           - platform: macos
             os: macos-15
@@ -253,7 +245,7 @@ jobs:
 
       - name: Code Sign
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
-        uses: hiddify/signtool-code-sign-sha256@main
+        uses: hiddify/signtool-code-sign-sha256@edf131ad76c36ab1a9b468cdfa02acafd8a2a499 # main @ 2026-10-03
         with:
           certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
           cert-password: '${{ secrets.WINDOWS_SIGNING_PASSWORD }}'
@@ -319,11 +311,6 @@ jobs:
             mv dist/*/*.$EXT tmp_out/${FILENAME}.$EXT
             ls tmp_out
             [[ "$EXT" != "gz" ]] && chmod +x tmp_out/${FILENAME}.$EXT || echo "Skipping chmod for gz"
-            if [ "${{matrix.platform}}" == "linux" ];then
-              cp ./.github/help/linux/* tmp_out/
-            else
-              cp ./.github/help/mac-windows/* tmp_out/
-            fi
             if [[ "${{matrix.platform}}" == 'ios' ]];then
               echo mv tmp_out/${FILENAME}.$EXT out/
               mv tmp_out/${FILENAME}.$EXT out/
@@ -387,7 +374,7 @@ jobs:
           set +e 
           sed 's|RELEASE_TAG|${{ env.TAG_NAME }}|g' ./.github/release_message.md > release.md
           pip install gitchangelog pystache mustache markdown
-          prelease=$(curl --silent "https://api.github.com/repos/hiddify/hiddify-app/releases/latest" | grep -Po '"tag_name": "\K([^"]*)') 
+          prelease=$(curl --silent "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep -Po '"tag_name": "\K([^"]*)')
           echo -e "\n\n<details markdown=1><summary>All changes from $current to the latest commit:</summary>\n\n">>release.md
           gitchangelog "${prelease}.." >> release.md  2>&1 || echo "Error in gitchangelog"
           echo -e "\n\n</details>">>release.md
@@ -401,20 +388,6 @@ jobs:
           tag_name: 'draft'
           body_path: './release.md'
           prerelease: true
-
-      - name: Create or Update Draft Release
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_FOR_HIDDIFY_APP_REPO }}
-          GITHUB_REPOSITORY: hiddify/hiddify-app
-        with:
-          files: ./out/*
-          name: 'draft'
-          tag_name: 'draft'
-          body_path: './release.md'
-          target_commitish: '530bf77839a74d4f13847ba244a20734ac7ab119'
-          prerelease: true
-          repository: hiddify/hiddify-app
 
   upload-release:
     permissions: write-all
@@ -455,10 +428,27 @@ jobs:
           body_path: './release.md'
           files: ./out/*
 
+      - name: Publish app release to derbent-releases (update checker source)
+        uses: softprops/action-gh-release@v2
+        if: ${{ success() }}
+        with:
+          repository: cumhuriyet-bizim-platformu/derbent-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
+          body_path: './release.md'
+          files: ./out/*
+          prerelease: ${{ env.CHANNEL == 'dev' }}
+          # App releases are the only derbent-releases releases marked latest;
+          # core-v*/server-v* releases are created with --latest=false.
+          make_latest: ${{ env.CHANNEL == 'dev' && 'false' || 'true' }}
+
       - name: Create service_account.json
+        if: ${{ vars.STORE_UPLOAD == 'true' }}
         run: echo '${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}' > service_account.json
 
       - name: Deploy to Google Play Internal Testers
+        if: ${{ vars.STORE_UPLOAD == 'true' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: service_account.json
@@ -470,7 +460,7 @@ jobs:
 
   upload-to-testflight:
     needs: [build]
-    if: ${{ inputs.upload-artifact &&  inputs.tag-name != 'draft' }}
+    if: ${{ inputs.upload-artifact && inputs.tag-name != 'draft' && vars.STORE_UPLOAD == 'true' }}
     #if: ${{ inputs.upload-artifact }}
     runs-on: macOS-latest
     timeout-minutes: 30

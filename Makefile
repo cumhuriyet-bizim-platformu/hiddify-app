@@ -49,11 +49,8 @@ CORE_PRODUCT_NAME=hiddify-core
 CORE_NAME=hiddify-lib
 LIB_NAME=hiddify-core
 
-ifeq ($(CHANNEL),prod)
-	CORE_URL=https://github.com/hiddify/hiddify-core/releases/download/v$(core.version)
-else
-	CORE_URL=https://github.com/hiddify/hiddify-core/releases/download/draft
-endif
+# Core libraries are built by the monorepo's build-core workflow and published to derbent-releases.
+CORE_URL=https://github.com/cumhuriyet-bizim-platformu/derbent-releases/releases/download/core-v$(core.version)-derbent.$(core.derbent)
 
 ifeq ($(CHANNEL),prod)
 	TARGET=lib/main_prod.dart
@@ -97,8 +94,6 @@ linux-prepare: common-prepare linux-amd64-libs
 
 linux-amd64-prepare: common-prepare linux-amd64-libs
 linux-arm64-prepare: common-prepare linux-arm64-libs
-linux-amd64-musl-prepare: common-prepare linux-amd64-musl-libs
-linux-arm64-musl-prepare: common-prepare linux-arm64-musl-libs
 
 
 linux-appimage-prepare:linux-prepare
@@ -180,9 +175,7 @@ LINUX_DEPS = $(shell grep -vE '^\s*#|^\s*$$' linux_deps.list)
 REQUIRED_VER = $(shell sed -n '/environment:/,/flutter:/ s/.*flutter:[[:space:]]*//p' pubspec.yaml | tr -d " '^\"")
 
 linux-amd64-install-deps:linux-install-deps
-linux-amd64-musl-install-deps:linux-install-deps
 linux-arm64-install-deps:linux-install-deps
-linux-arm64-musl-install-deps:linux-install-deps
 
 linux-install-deps:
 	@$(BLUE)Installing Debian/Ubuntu dependencies...$(DONE)
@@ -323,8 +316,6 @@ linux-release: linux-deb-release linux-appimage-release
 
 linux-amd64-release: linux-release
 linux-arm64-release: linux-release
-linux-amd64-musl-release: linux-release 
-linux-arm64-musl-release: linux-release
 
 
 linux-deb-release:
@@ -459,42 +450,34 @@ ios-release: #not tested
 
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+	curl -fL $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
 
 windows-libs:
 	$(MKDIR) $(DESKTOP_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-windows-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	curl -fL $(CORE_URL)/$(CORE_NAME)-windows-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
 	ls $(DESKTOP_OUT) || dir $(DESKTOP_OUT)/
 	
 
 linux-amd64-libs:
 	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	curl -fL $(CORE_URL)/$(CORE_NAME)-linux-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
 
 linux-arm64-libs:
 	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-arm64.tar.gz | tar xz -C $(DESKTOP_OUT)/
-
-linux-amd64-musl-libs:
-	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-amd64-musl.tar.gz | tar xz -C $(DESKTOP_OUT)/
-
-linux-arm64-musl-libs:
-	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-arm64-musl.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	curl -fL $(CORE_URL)/$(CORE_NAME)-linux-arm64.tar.gz | tar xz -C $(DESKTOP_OUT)/
 
 
 macos-libs:
 	mkdir -p  $(DESKTOP_OUT) 
-	curl -L $(CORE_URL)/$(CORE_NAME)-macos.tar.gz | tar xz -C $(DESKTOP_OUT)
+	curl -fL $(CORE_URL)/$(CORE_NAME)-macos.tar.gz | tar xz -C $(DESKTOP_OUT)
 
 ios-libs: #not tested
 	mkdir -p $(IOS_OUT)
 	rm -rf $(IOS_OUT)/HiddifyCore.xcframework
-	curl -L $(CORE_URL)/$(CORE_NAME)-ios.tar.gz | tar xz -C "$(IOS_OUT)"
+	curl -fL $(CORE_URL)/$(CORE_NAME)-ios.tar.gz | tar xz -C "$(IOS_OUT)"
 
 get-geo-assets:
 	echo ""
@@ -523,7 +506,7 @@ build-ios-libs:
 	mv $(BINDIR)/HiddifyCore.xcframework $(IOS_OUT)/HiddifyCore.xcframework
 
 release: # Create a new tag for release.
-	@CORE_VERSION=$(core.version) bash -c ".github/change_version.sh "
+	@CORE_VERSION=$(core.version) CORE_DERBENT=$(core.derbent) bash -c ".github/change_version.sh "
 
 
 
