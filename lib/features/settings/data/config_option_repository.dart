@@ -1,9 +1,11 @@
 import 'package:dartx/dartx.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/model/optional_range.dart';
 import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/preferences/clash_api_secret.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
+import 'package:hiddify/core/rule_sets/rule_set_installer.dart';
 import 'package:hiddify/core/utils/exception_handler.dart';
 import 'package:hiddify/core/utils/json_converters.dart';
 import 'package:hiddify/core/utils/preferences_utils.dart';
@@ -419,6 +421,7 @@ abstract class ConfigOptions {
 
     return SingboxConfigOption(
       region: ref.watch(region).name,
+      ruleSetDir: RuleSetInstaller.corePath(ref.watch(appDirectoriesProvider).valueOrNull),
       balancerStrategy: ref.watch(balancerStrategy),
       blockAds: ref.watch(blockAds),
       useXrayCoreWhenPossible: ref.watch(useXrayCoreWhenPossible),

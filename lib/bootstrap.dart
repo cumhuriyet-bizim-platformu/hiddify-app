@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hiddify/core/app_info/app_info_provider.dart';
@@ -14,6 +15,7 @@ import 'package:hiddify/core/model/environment.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/preferences/preferences_migration.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
+import 'package:hiddify/core/rule_sets/rule_set_installer.dart';
 import 'package:hiddify/features/app/widget/app.dart';
 import 'package:hiddify/features/auto_start/notifier/auto_start_notifier.dart';
 
@@ -80,6 +82,12 @@ Future<void> lazyBootstrap(WidgetsBinding widgetsBinding, Environment env) async
   await _init("translations", () => container.read(translationsProvider.future));
 
   await _safeInit("active profile", () => container.read(activeProfileProvider.future), timeout: 1000);
+  if (!kIsWeb) {
+    await _safeInit("rule-sets", () {
+      final workingDir = container.read(appDirectoriesProvider).requireValue.workingDir;
+      return RuleSetInstaller(bundle: rootBundle, targetDir: RuleSetInstaller.dirFor(workingDir)).install();
+    });
+  }
   await _init("hiddify-core", () => container.read(hiddifyCoreServiceProvider).init());
 
   if (!kIsWeb) {
