@@ -92,10 +92,6 @@ class ProxyRepositoryImpl with ExceptionHandler, InfraLogger implements ProxyRep
   }
 
   static final Map<String, oldipinfo.IpInfo Function(Map<String, dynamic> response)> _ipInfoSources = {
-    // "https://geolocation-db.com/json/": IpInfo.fromGeolocationDbComJson, //bug response is not json
-    "https://ipwho.is/": oldipinfo.IpInfo.fromIpwhoIsJson,
-    "https://api.ip.sb/geoip/": oldipinfo.IpInfo.fromIpSbJson,
-    "https://ipapi.co/json/": oldipinfo.IpInfo.fromIpApiCoJson,
     "https://ipinfo.io/json/": oldipinfo.IpInfo.fromIpInfoIoJson,
   };
 
