@@ -72,7 +72,6 @@ dependencies:
   # percent_indicator_premium: ^0.0.2
   sliver_tools: ^0.2.12
   font_awesome_flutter: ^10.7.0
-  upgrader: ^11.3.0
   toastification: ^2.3.0
   version: ^3.0.2
   posix: ^6.0.1
@@ -166,6 +165,7 @@ flutter:
     - assets/images/disconnect_norouz.PNG
     - assets/images/world_map.png
     - assets/images/source/ic_launcher_border.png
+    - assets/per_app/android_gfw_apps/
 
   fonts:
     - family: Shabnam

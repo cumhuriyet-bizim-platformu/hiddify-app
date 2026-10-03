@@ -35,7 +35,10 @@ class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppU
         return left(const AppUpdateFailure.unexpected());
       }
 
-      final releases = response.data!.map((e) => GithubReleaseParser.parse(e as Map<String, dynamic>));
+      final releases = response.data!
+          .cast<Map<String, dynamic>>()
+          .where(GithubReleaseParser.isAppRelease)
+          .map(GithubReleaseParser.parse);
       late RemoteVersionEntity latest;
       if (includePreReleases) {
         latest = releases.first;

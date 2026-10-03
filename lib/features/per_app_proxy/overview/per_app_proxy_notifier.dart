@@ -6,10 +6,8 @@ import 'package:dartx/dartx_io.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:hiddify/core/localization/translations.dart';
-import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
-import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/per_app_proxy/data/auto_selection_repository.dart';
 import 'package:hiddify/features/per_app_proxy/data/auto_selection_repository_provider.dart';
 import 'package:hiddify/features/per_app_proxy/data/selected_data_provider.dart';
@@ -168,48 +166,6 @@ class PerAppProxy extends _$PerAppProxy with AppLogger {
     } catch (e, st) {
       loggy.warning("error exporting config options to json file", e, st);
       ref.read(inAppNotificationControllerProvider).showErrorToast(t.common.msg.export.file.failure);
-      return false;
-    }
-  }
-
-  Future<bool> shareOnGithub() async {
-    final t = ref.watch(translationsProvider).requireValue;
-    final region = ref.watch(ConfigOptions.region);
-    final mode = ref.watch(Preferences.perAppProxyMode).toAppProxy()!;
-    assert(region != Region.other);
-    final rs = await ref.read(autoSelectionRepoProvider).getByAppProxyMode(mode: mode, region: region);
-    if (rs.$2 != AutoSelectionResult.success) return false;
-    final autoList = rs.$1!;
-    final userSelected =
-        (await ref.read(appProxyDataSourceProvider).getPkgsByFlag(mode: mode, flag: PkgFlag.userSelection))
-          ..removeWhere((pkg) => autoList.contains(pkg));
-    final forceDeselected =
-        (await ref.read(appProxyDataSourceProvider).getPkgsByFlag(mode: mode, flag: PkgFlag.forceDeselection))
-          ..removeWhere((pkg) => !autoList.contains(pkg));
-
-    if (userSelected.isNotEmpty || forceDeselected.isNotEmpty) {
-      final agree = await ref
-          .read(dialogNotifierProvider.notifier)
-          .showConfirmation(
-            title: t.dialogs.confirmation.perAppProxy.shareOnGithub.title,
-            message: t.dialogs.confirmation.perAppProxy.shareOnGithub.msg,
-            positiveBtnTxt: t.common.kContinue,
-          );
-      if (agree != true) return false;
-      final title = '${region.name} | ${mode.present(t).title}';
-      var body = const JsonEncoder.withIndent(
-        '  ',
-      ).convert({'addedPkgs': userSelected.toList(), 'removedPkgs': forceDeselected.toList()});
-      body = '```\n$body\n```';
-      UriUtils.tryLaunch(Uri.parse('https://github.com/hiddify/Android-GFW-Apps/issues/new?title=$title&body=$body'));
-      return true;
-    } else {
-      ref
-          .read(inAppNotificationControllerProvider)
-          .showInfoToast(
-            t.pages.settings.routing.perAppProxy.autoSelection.toast.alreadyInAuto,
-            duration: const Duration(seconds: 5),
-          );
       return false;
     }
   }

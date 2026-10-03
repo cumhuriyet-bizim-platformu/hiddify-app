@@ -198,13 +198,6 @@ class PerAppProxyPage extends HookConsumerWidget with PresLogger {
                       ],
                       child: Text(t.common.export),
                     ),
-                    if (ref.watch(ConfigOptions.region) != Region.other)
-                      MenuItemButton(
-                        child: Text(t.pages.settings.routing.perAppProxy.options.shareToAll),
-                        onPressed: () async => await ref
-                            .read(appProxyLoadingProvider.notifier)
-                            .doAsync(ref.read(PerAppProxyProvider(mode).notifier).shareOnGithub),
-                      ),
                     const PopupMenuDivider(),
                     MenuItemButton(
                       child: Text(t.pages.settings.routing.perAppProxy.options.clearAllSelections),

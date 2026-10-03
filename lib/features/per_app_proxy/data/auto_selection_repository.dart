@@ -1,6 +1,4 @@
-import 'package:dio/dio.dart';
-import 'package:hiddify/core/http_client/dio_http_client.dart';
-import 'package:hiddify/core/http_client/http_client_provider.dart';
+import 'package:flutter/services.dart';
 import 'package:hiddify/core/model/region.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/per_app_proxy/model/per_app_proxy_mode.dart';
@@ -25,9 +23,12 @@ abstract interface class AutoSelectionRepository {
 }
 
 class AutoSelectionRepositoryImpl with AppLogger implements AutoSelectionRepository {
-  AutoSelectionRepositoryImpl({required Ref ref}) : _ref = ref;
+  AutoSelectionRepositoryImpl({required Ref ref, AssetBundle? bundle}) : _ref = ref, _bundle = bundle ?? rootBundle;
   final Ref _ref;
-  static const _baseUrl = 'https://raw.githubusercontent.com/hiddify/Android-GFW-Apps/refs/heads/master/';
+  final AssetBundle _bundle;
+
+  /// Bundled snapshot of hiddify/Android-GFW-Apps @ 8b4150811d46cee3dde5ddb762d1d181478b5b30 (GPL-3.0).
+  static const assetDir = 'assets/per_app/android_gfw_apps';
 
   @override
   Future<(Set<String>?, AutoSelectionResult)> getByAppProxyMode({AppProxyMode? mode, Region? region}) async =>
@@ -42,30 +43,25 @@ class AutoSelectionRepositoryImpl with AppLogger implements AutoSelectionReposit
       await _makeRequest(mode: AppProxyMode.include, region: region ?? _getRegion());
 
   Future<(Set<String>?, AutoSelectionResult)> _makeRequest({required AppProxyMode mode, Region? region}) async {
+    final r = region ?? _getRegion();
+    final String content;
     try {
-      final rs = await _getHttp().get(_genUrl(mode, region ?? _getRegion()));
-      if (rs.statusCode == 200) {
-        return (_parseToListOfString(rs.data), AutoSelectionResult.success);
-      }
-      loggy.error("Auto selection failed. status code : ${rs.statusCode}");
-      return (null, AutoSelectionResult.failure);
-    } on DioException catch (e, st) {
-      if (e.response?.statusCode == 404) {
-        loggy.error("Auto selection region not found. region : ${region?.name ?? _getRegion().name}", e, st);
-        return (null, AutoSelectionResult.notFound);
-      } else {
-        loggy.error("Failed to fetch auto selection", e, st);
-        return (null, AutoSelectionResult.failure);
-      }
+      content = await _bundle.loadString(assetPath(mode, r), cache: false);
+    } catch (e) {
+      loggy.warning("no bundled auto selection list for region [${r.name}]");
+      return (null, AutoSelectionResult.notFound);
+    }
+    try {
+      return (_parseToListOfString(content), AutoSelectionResult.success);
     } catch (e, st) {
-      loggy.error("Failed to fetch auto selection with unexpected error", e, st);
+      loggy.error("Failed to parse bundled auto selection list", e, st);
       return (null, AutoSelectionResult.failure);
     }
   }
 
-  String _genUrl(AppProxyMode mode, Region region) => switch (mode) {
-    AppProxyMode.include => '${_baseUrl}proxy_${region.name}',
-    AppProxyMode.exclude => '${_baseUrl}direct_${region.name}',
+  static String assetPath(AppProxyMode mode, Region region) => switch (mode) {
+    AppProxyMode.include => '$assetDir/proxy_${region.name}',
+    AppProxyMode.exclude => '$assetDir/direct_${region.name}',
   };
 
   Set<String> _parseToListOfString(dynamic data) =>
@@ -74,6 +70,4 @@ class AutoSelectionRepositoryImpl with AppLogger implements AutoSelectionReposit
   AppProxyMode _getMode() => _ref.read(Preferences.perAppProxyMode).toAppProxy()!;
 
   Region _getRegion() => _ref.read(ConfigOptions.region);
-
-  DioHttpClient _getHttp() => _ref.read(httpClientProvider);
 }
