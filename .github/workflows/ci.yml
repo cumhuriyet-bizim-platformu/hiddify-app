@@ -6,7 +6,6 @@ on:
       - 'docs/**'
       - 'test.configs/**'
       - '.vscode/'
-      - 'appcast.xml'
   push:
     branches:
        - main
@@ -18,7 +17,6 @@ on:
       - '**.md'
       - 'docs/**'
       - '.vscode/'
-      - 'appcast.xml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

@@ -93,8 +93,6 @@ jobs:
           #   aarch: arm64
           #   targets: deb,gz
 
-
-            
           - platform: macos
             os: macos-15
             aarch: universal
@@ -379,7 +377,7 @@ jobs:
           gitchangelog "${prelease}.." >> release.md  2>&1 || echo "Error in gitchangelog"
           echo -e "\n\n</details>">>release.md
       - name: Create or Update Draft Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2 @ 2026-10-03
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -417,7 +415,7 @@ jobs:
           sed 's|RELEASE_TAG|${{ env.TAG_NAME }}|g' ./.github/release_message.md >> release.md
 
       - name: Upload Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2 @ 2026-10-03
         if: ${{ success() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -429,7 +427,7 @@ jobs:
           files: ./out/*
 
       - name: Publish app release to derbent-releases (update checker source)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2 @ 2026-10-03
         if: ${{ success() }}
         with:
           repository: cumhuriyet-bizim-platformu/derbent-releases
