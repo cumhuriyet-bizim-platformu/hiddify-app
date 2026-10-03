@@ -16,8 +16,9 @@
 ^ios/Runner\.xcodeproj/xcshareddata/xcschemes/HiddifyPacketTunnel\.xcscheme$	BundleIdentifier = "apple\.hiddify\.com"	branding metadata (bundle id in Xcode scheme), changes in the branding phase
 ^lib/hiddifycore/core_interface/core_interface_mobile\.dart$	^[[:space:]]*// await start\("/sdcard/Android/data/app\.hiddify\.com/	code comment with an on-device path (bundle id), not executed
 ^lib/features/profile/data/profile_parser\.dart$	// See https://github\.com/hiddify/hiddify-app/issues/1974	code comment citing an upstream issue, not fetched
-# Task 24 (plan step 3d), merged without duplicates.
-.	(^|[^[:alnum:]_.-])(dist\.apple\.)?(app|apple)\.hiddify\.com(\.[[:alnum:]]+)*([^[:alnum:]_.-]|$)	application and bundle identifiers, not hosts; renamed with branding (group D, out of scope)
+# Task 24 (plan step 3d) app-id entry, narrowed per file (fix round 1, I1).
+^\.github/workflows/build\.yml$	^[[:space:]]*(packageName|bundle-id): app\.hiddify\.com(\.SingBoxPacketTunnel)?$	Android package name and iOS bundle identifiers passed to the store-upload steps; identifiers, not URLs, nothing is fetched; change in the branding phase (group D)
+^Makefile$	/a StartupWMClass=app\.hiddify\.com'	desktop-entry window class set to the application id while packaging the AppImage; an identifier, nothing is fetched; changes in the branding phase (group D)
 # Rulings PB9 and PB10.
 ^\.github/workflows/build\.yml$	uses: hiddify/signtool-code-sign-sha256@edf131ad76c36ab1a9b468cdfa02acafd8a2a499( |$)	spec §6 pin-to-SHA option; forking into the org is an owner decision (Windows release signing step, pinned to a full commit SHA)
 ^packages/flutter_circle_flags/pubspec\.yaml$	^repository: https://github\.com/hiddify-com/flutter_circle_flags$	vendored upstream package metadata (pub repository field); the package is a local path dependency, nothing is fetched
