@@ -484,6 +484,20 @@ get-geo-assets:
 	# curl -L https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db -o $(GEO_ASSETS_DIR)/geoip.db
 	# curl -L https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db -o $(GEO_ASSETS_DIR)/geosite.db
 
+# Sing-box rule-sets bundled into the app (Task 20). The source is the derbent
+# monorepo; the copy under assets/rule-set is committed so this fork builds alone.
+RULE_SET_SRC ?= ../../data/hiddify-geo/rule-set
+RULE_SET_DST := assets/rule-set
+RULE_SET_FILES := block/geosite-category-ads-all.srs block/geosite-malware.srs block/geosite-phishing.srs block/geosite-cryptominers.srs block/geoip-phishing.srs block/geoip-malware.srs country/geoip-tr.srs
+
+rule-set-assets:
+	@test -d "$(RULE_SET_SRC)" || { echo "rule-set source not found: $(RULE_SET_SRC) (run inside the derbent monorepo or set RULE_SET_SRC)"; exit 1; }
+	rm -rf "$(RULE_SET_DST)"
+	mkdir -p "$(RULE_SET_DST)/block" "$(RULE_SET_DST)/country"
+	for f in $(RULE_SET_FILES); do cp "$(RULE_SET_SRC)/$$f" "$(RULE_SET_DST)/$$f" || exit 1; done
+	cp "$(RULE_SET_SRC)/SOURCE" "$(RULE_SET_DST)/SOURCE"
+	cd "$(RULE_SET_DST)" && for f in $(RULE_SET_FILES); do shasum -a 256 "$$f"; done > manifest.txt
+
 build-headers:
 	make -C hiddify-core -f Makefile headers && mv $(BINDIR)/$(CORE_NAME)-headers.h $(BINDIR)/hiddify-core.h
 

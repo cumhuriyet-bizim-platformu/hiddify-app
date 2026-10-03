@@ -139,6 +139,9 @@ flutter:
   assets:
     # - assets/core/geoip.db
     # - assets/core/geosite.db
+    - assets/rule-set/
+    - assets/rule-set/block/
+    - assets/rule-set/country/
     - assets/images/logo.svg
     - assets/images/tray_icon.ico
     - assets/images/tray_icon.png
