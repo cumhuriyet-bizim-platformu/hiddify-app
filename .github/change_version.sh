@@ -16,14 +16,16 @@ echo "Current Version Name:${cstr_version}   Build Number:${cbuild_number}"
 # Derbent: release tags are v<upstream x.y.z>-derbent.<N>; a trailing .dev marks a pre-release.
 read -p "new tag? (v<x.y.z>-derbent.<N> or v<x.y.z>-derbent.<N>.dev) : " TAG 
 echo $TAG 
-[[ "$TAG" =~ ^v([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2})-derbent\.([0-9]+)(\.dev)?$ ]] || { echo "Incorrect tag. e.g., v4.1.2-derbent.1 or v4.1.2-derbent.1.dev"; exit 1; } 
+[[ "$TAG" =~ ^v([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2})-derbent\.([0-9]{1,2})(\.dev)?$ ]] || { echo "Incorrect tag. e.g., v4.1.2-derbent.1 or v4.1.2-derbent.1.dev"; exit 1; } 
 VERSION_ARRAY=("${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}") 
+N="${BASH_REMATCH[4]}" 
 VERSION_STR="${VERSION_ARRAY[0]}.${VERSION_ARRAY[1]}.${VERSION_ARRAY[2]}" 
-BUILD_NUMBER=$(( ${VERSION_ARRAY[0]} * 10000 + ${VERSION_ARRAY[1]} * 100 + ${VERSION_ARRAY[2]} )) 
+# Derbent: versionCode must grow with every derbent.N of one upstream version: (x*10000+y*100+z)*100+N.
+BUILD_NUMBER=$(( (${VERSION_ARRAY[0]} * 10000 + ${VERSION_ARRAY[1]} * 100 + ${VERSION_ARRAY[2]}) * 100 + N )) 
 echo "version: ${VERSION_STR}+${BUILD_NUMBER}" 
 echo "====$cbuild_number"
 SED "s/^version: .*/version: ${VERSION_STR}\+${BUILD_NUMBER}/g" pubspec.yaml 
-SED "s/^msix_version: .*/msix_version: ${VERSION_ARRAY[0]}.${VERSION_ARRAY[1]}.${VERSION_ARRAY[2]}.0/g" windows/packaging/msix/make_config.yaml 
+SED "s/^msix_version: .*/msix_version: ${VERSION_ARRAY[0]}.${VERSION_ARRAY[1]}.${VERSION_ARRAY[2]}.${N}/g" windows/packaging/msix/make_config.yaml 
 SED "s|CURRENT_PROJECT_VERSION = ${cbuild_number}|CURRENT_PROJECT_VERSION = ${BUILD_NUMBER}|g" ios/Runner.xcodeproj/project.pbxproj 
 SED "s/MARKETING_VERSION = ${cstr_version}/MARKETING_VERSION = ${VERSION_STR}/g" ios/Runner.xcodeproj/project.pbxproj 
 
