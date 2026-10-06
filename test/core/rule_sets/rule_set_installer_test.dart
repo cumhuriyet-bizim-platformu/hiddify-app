@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,8 @@ class _MapAssetBundle extends CachingAssetBundle {
   }
 }
 
+String _sum(String v) => sha256.convert(utf8.encode(v)).toString();
+
 _MapAssetBundle _bundle(String manifest, Map<String, String> files) => _MapAssetBundle({
   '${RuleSetInstaller.assetDir}/${RuleSetInstaller.manifestName}': utf8.encode(manifest),
   for (final entry in files.entries) '${RuleSetInstaller.assetDir}/${entry.key}': utf8.encode(entry.value),
@@ -40,7 +43,7 @@ void main() {
   });
 
   test('copies every file listed in the manifest', () async {
-    const manifest = 'aaa  block/geoip-malware.srs\nbbb  country/geoip-tr.srs\n';
+    final manifest = '${_sum('M')}  block/geoip-malware.srs\n${_sum('T')}  country/geoip-tr.srs\n';
     final bundle = _bundle(manifest, {'block/geoip-malware.srs': 'M', 'country/geoip-tr.srs': 'T'});
     final target = RuleSetInstaller.dirFor(tmp);
 
@@ -53,7 +56,7 @@ void main() {
   });
 
   test('skips the copy when the installed manifest matches', () async {
-    const manifest = 'bbb  country/geoip-tr.srs\n';
+    final manifest = '${_sum('T')}  country/geoip-tr.srs\n';
     final target = RuleSetInstaller.dirFor(tmp);
     await RuleSetInstaller(bundle: _bundle(manifest, {'country/geoip-tr.srs': 'T'}), targetDir: target).install();
 
@@ -67,17 +70,56 @@ void main() {
   test('replaces the old files when the manifest changes', () async {
     final target = RuleSetInstaller.dirFor(tmp);
     await RuleSetInstaller(
-      bundle: _bundle('aaa  block/geoip-malware.srs\n', {'block/geoip-malware.srs': 'M'}),
+      bundle: _bundle('${_sum('M')}  block/geoip-malware.srs\n', {'block/geoip-malware.srs': 'M'}),
       targetDir: target,
     ).install();
 
     await RuleSetInstaller(
-      bundle: _bundle('ccc  country/geoip-tr.srs\n', {'country/geoip-tr.srs': 'T2'}),
+      bundle: _bundle('${_sum('T2')}  country/geoip-tr.srs\n', {'country/geoip-tr.srs': 'T2'}),
       targetDir: target,
     ).install();
 
     expect(File(p.join(target.path, 'block', 'geoip-malware.srs')).existsSync(), isFalse);
     expect(File(p.join(target.path, 'country', 'geoip-tr.srs')).readAsStringSync(), 'T2');
+  });
+
+  test('restores a listed file that was deleted', () async {
+    final manifest = '${_sum('M')}  block/geoip-malware.srs\n${_sum('T')}  country/geoip-tr.srs\n';
+    final files = {'block/geoip-malware.srs': 'M', 'country/geoip-tr.srs': 'T'};
+    final target = RuleSetInstaller.dirFor(tmp);
+    await RuleSetInstaller(bundle: _bundle(manifest, files), targetDir: target).install();
+    final victim = File(p.join(target.path, 'country', 'geoip-tr.srs'))..deleteSync();
+
+    final wrote = await RuleSetInstaller(bundle: _bundle(manifest, files), targetDir: target).install();
+
+    expect(wrote, isTrue);
+    expect(sha256.convert(victim.readAsBytesSync()).toString(), _sum('T'));
+  });
+
+  test('restores a listed file that was corrupted, copying only that file', () async {
+    final manifest = '${_sum('M')}  block/geoip-malware.srs\n${_sum('T')}  country/geoip-tr.srs\n';
+    final files = {'block/geoip-malware.srs': 'M', 'country/geoip-tr.srs': 'T'};
+    final target = RuleSetInstaller.dirFor(tmp);
+    await RuleSetInstaller(bundle: _bundle(manifest, files), targetDir: target).install();
+    final victim = File(p.join(target.path, 'block', 'geoip-malware.srs'))..writeAsStringSync('junk');
+
+    final again = _bundle(manifest, files);
+    final wrote = await RuleSetInstaller(bundle: again, targetDir: target).install();
+
+    expect(wrote, isTrue);
+    expect(sha256.convert(victim.readAsBytesSync()).toString(), _sum('M'));
+    expect(again.loaded, contains('${RuleSetInstaller.assetDir}/block/geoip-malware.srs'));
+    expect(again.loaded, isNot(contains('${RuleSetInstaller.assetDir}/country/geoip-tr.srs')));
+  });
+
+  test('copies a file whose manifest hash cannot be a sha256', () async {
+    const manifest = 'zzz  country/geoip-tr.srs\n';
+    final target = RuleSetInstaller.dirFor(tmp);
+    await RuleSetInstaller(bundle: _bundle(manifest, {'country/geoip-tr.srs': 'T'}), targetDir: target).install();
+
+    final wrote = await RuleSetInstaller(bundle: _bundle(manifest, {'country/geoip-tr.srs': 'T'}), targetDir: target).install();
+
+    expect(wrote, isTrue);
   });
 
   test('rejects manifest paths outside the rule-set directory', () {

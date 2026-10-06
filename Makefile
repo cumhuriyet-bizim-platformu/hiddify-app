@@ -498,7 +498,8 @@ rule-set-assets:
 	rm -rf "$(RULE_SET_DST)"
 	mkdir -p "$(RULE_SET_DST)/block" "$(RULE_SET_DST)/country"
 	for f in $(RULE_SET_FILES); do cp "$(RULE_SET_SRC)/$$f" "$(RULE_SET_DST)/$$f" || exit 1; done
-	cp "$(RULE_SET_SRC)/SOURCE" "$(RULE_SET_DST)/SOURCE"
+	sed 's|license text: data/hiddify-geo/LICENSE in the Derbent source repo|license text: ./LICENSE|' "$(RULE_SET_SRC)/SOURCE" > "$(RULE_SET_DST)/SOURCE"
+	cp "$(RULE_SET_SRC)/../LICENSE" "$(RULE_SET_DST)/LICENSE"
 	cd "$(RULE_SET_DST)" && for f in $(RULE_SET_FILES); do shasum -a 256 "$$f"; done > manifest.txt
 
 build-headers:

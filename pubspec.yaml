@@ -55,6 +55,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.28
 
   combine: ^0.5.7
+  crypto: ^3.0.6
   path: ^1.9.0
   loggy: ^2.0.3
   flutter_loggy: ^2.0.2

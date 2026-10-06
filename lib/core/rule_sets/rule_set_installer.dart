@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:hiddify/core/model/directories.dart';
 import 'package:path/path.dart' as p;
@@ -29,21 +30,31 @@ class RuleSetInstaller {
   static String corePath(Directories? dirs) => dirs == null ? '' : dirFor(dirs.workingDir).path;
 
   /// Copies the bundled files. Returns false when the installed copy is
-  /// already current.
+  /// already current and intact. When the manifests match, each listed file is
+  /// checked against its sha256 and only missing or mismatched files are
+  /// copied again; a changed manifest replaces the whole directory.
   Future<bool> install() async {
     final manifest = await bundle.loadString('$assetDir/$manifestName', cache: false);
+    final entries = parseEntries(manifest);
     final installedManifest = File(p.join(targetDir.path, manifestName));
-    if (await installedManifest.exists() && await installedManifest.readAsString() == manifest) {
-      return false;
-    }
-    final files = parseManifest(manifest);
-    if (await targetDir.exists()) {
-      await targetDir.delete(recursive: true);
+    final sameManifest = await installedManifest.exists() && await installedManifest.readAsString() == manifest;
+    final List<String> toCopy;
+    if (sameManifest) {
+      toCopy = [
+        for (final e in entries)
+          if (!await _intact(e.path, e.sha256)) e.path,
+      ];
+      if (toCopy.isEmpty) return false;
+    } else {
+      if (await targetDir.exists()) {
+        await targetDir.delete(recursive: true);
+      }
+      toCopy = [for (final e in entries) e.path];
     }
     await targetDir.create(recursive: true);
-    for (final relative in files) {
+    for (final relative in toCopy) {
       final data = await bundle.load('$assetDir/$relative');
-      final out = File(p.joinAll([targetDir.path, ...p.posix.split(relative)]));
+      final out = _file(relative);
       await out.parent.create(recursive: true);
       await out.writeAsBytes(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes), flush: true);
     }
@@ -51,10 +62,24 @@ class RuleSetInstaller {
     return true;
   }
 
-  /// The relative paths listed in [manifest]. Throws a [FormatException] for a
-  /// malformed line or a path that is absolute or leaves the directory.
-  static List<String> parseManifest(String manifest) {
-    final files = <String>[];
+  File _file(String relative) => File(p.joinAll([targetDir.path, ...p.posix.split(relative)]));
+
+  /// True when the installed file exists and its sha256 equals [expected]. An
+  /// unparsable [expected] never matches, so the file is copied again.
+  Future<bool> _intact(String relative, String expected) async {
+    final file = _file(relative);
+    try {
+      if (!await file.exists()) return false;
+      return sha256.convert(await file.readAsBytes()).toString() == expected.toLowerCase();
+    } on FileSystemException {
+      return false;
+    }
+  }
+
+  /// The `(sha256, path)` pairs listed in [manifest]; see [parseManifest] for
+  /// the path rules. The hash is not validated here.
+  static List<({String sha256, String path})> parseEntries(String manifest) {
+    final entries = <({String sha256, String path})>[];
     for (final line in manifest.split('\n')) {
       final trimmed = line.trim();
       if (trimmed.isEmpty) continue;
@@ -66,8 +91,12 @@ class RuleSetInstaller {
       if (p.posix.isAbsolute(relative) || p.posix.normalize(relative) != relative || relative.startsWith('..')) {
         throw FormatException('bad rule-set path', relative);
       }
-      files.add(relative);
+      entries.add((sha256: parts[0], path: relative));
     }
-    return files;
+    return entries;
   }
+
+  /// The relative paths listed in [manifest]. Throws a [FormatException] for a
+  /// malformed line or a path that is absolute or leaves the directory.
+  static List<String> parseManifest(String manifest) => [for (final e in parseEntries(manifest)) e.path];
 }
