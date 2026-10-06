@@ -17,9 +17,15 @@ abstract interface class AppUpdateRepository {
 }
 
 class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppUpdateRepository {
-  AppUpdateRepositoryImpl({required this.httpClient});
+  AppUpdateRepositoryImpl({required this.httpClient, required this.proxyOnly});
 
   final DioHttpClient httpClient;
+
+  /// Evaluated per request. True means the GitHub call must go through the local proxy only.
+  final bool Function() proxyOnly;
+
+  static const _perPage = 100;
+  static const _maxPages = 5;
 
   @override
   TaskEither<AppUpdateFailure, RemoteVersionEntity?> getLatestVersion({
@@ -30,19 +36,28 @@ class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppU
       if (!release.allowCustomUpdateChecker) {
         throw Exception("custom update checkers are not supported");
       }
-      final response = await httpClient.get<List>('${Constants.githubReleasesApiUrl}?per_page=100');
-      if (response.statusCode != 200 || response.data == null) {
-        loggy.warning("failed to fetch latest version info");
-        return left(const AppUpdateFailure.unexpected());
-      }
+      RemoteVersionEntity? latest;
+      for (var page = 1; page <= _maxPages && latest == null; page++) {
+        // Derbent: while the VPN is up (or switching) this check is proxy-only. The default client
+        // would fall back to a direct connection if the proxy port looks closed, leaking a GitHub
+        // contact outside the tunnel. A proxy failure surfaces as AppUpdateFailure, never as DIRECT.
+        final response = await httpClient.get<List>(
+          '${Constants.githubReleasesApiUrl}?per_page=$_perPage&page=$page',
+          proxyOnly: proxyOnly(),
+        );
+        if (response.statusCode != 200 || response.data == null) {
+          loggy.warning("failed to fetch latest version info (page $page)");
+          return left(const AppUpdateFailure.unexpected());
+        }
+        final raw = response.data!;
+        if (raw.isEmpty) break;
 
-      final releases = response.data!
-          .cast<Map<String, dynamic>>()
-          .where(GithubReleaseParser.isAppRelease)
-          .map(GithubReleaseParser.parse);
-      final RemoteVersionEntity? latest = includePreReleases
-          ? releases.firstOrNull
-          : releases.where((e) => e.preRelease == false).firstOrNull;
+        final releases = raw
+            .cast<Map<String, dynamic>>()
+            .where(GithubReleaseParser.isAppRelease)
+            .map(GithubReleaseParser.parse);
+        latest = includePreReleases ? releases.firstOrNull : releases.where((e) => e.preRelease == false).firstOrNull;
+      }
       if (latest == null) loggy.info("no app release found in the fetched releases");
       return right(latest);
     }, AppUpdateFailure.unexpected);
