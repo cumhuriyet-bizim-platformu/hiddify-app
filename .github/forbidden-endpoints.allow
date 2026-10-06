@@ -19,6 +19,5 @@
 ^\.github/workflows/build\.yml$	^[[:space:]]*(packageName|bundle-id): app\.hiddify\.com(\.SingBoxPacketTunnel)?$	Android package name and iOS bundle identifiers passed to the store-upload steps; identifiers, not URLs, nothing is fetched; change in the branding phase (group D)
 ^Makefile$	/a StartupWMClass=app\.hiddify\.com'	desktop-entry window class set to the application id while packaging the AppImage; an identifier, nothing is fetched; changes in the branding phase (group D)
 # Rulings PB9 and PB10.
-^\.github/workflows/build\.yml$	uses: hiddify/signtool-code-sign-sha256@edf131ad76c36ab1a9b468cdfa02acafd8a2a499( |$)	spec §6 pin-to-SHA option; forking into the org is an owner decision (Windows release signing step, pinned to a full commit SHA)
 ^packages/flutter_circle_flags/pubspec\.yaml$	^repository: https://github\.com/hiddify-com/flutter_circle_flags$	vendored upstream package metadata (pub repository field); the package is a local path dependency, nothing is fetched
 ^assets/fonts/emoji_source\.txt$	^https://github\.com/hiddify-com/noto-emoji$	attribution text naming where the bundled Emoji.ttf subset came from; not an asset in pubspec and nothing is fetched
