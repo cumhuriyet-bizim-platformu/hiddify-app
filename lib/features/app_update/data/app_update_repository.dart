@@ -51,12 +51,14 @@ class AppUpdateRepositoryImpl with ExceptionHandler, InfraLogger implements AppU
         }
         final raw = response.data!;
         if (raw.isEmpty) break;
+        final lastPage = raw.length < _perPage;
 
         final releases = raw
             .cast<Map<String, dynamic>>()
             .where(GithubReleaseParser.isAppRelease)
             .map(GithubReleaseParser.parse);
         latest = includePreReleases ? releases.firstOrNull : releases.where((e) => e.preRelease == false).firstOrNull;
+        if (lastPage) break;
       }
       if (latest == null) loggy.info("no app release found in the fetched releases");
       return right(latest);

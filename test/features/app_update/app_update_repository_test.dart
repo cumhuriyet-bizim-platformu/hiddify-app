@@ -90,6 +90,13 @@ void main() {
       expect(c.proxyOnlyFlags, [false]);
     });
 
+    test('connected: the 5-request cap is proxy-only on every request', () async {
+      final page = [for (var i = 0; i < 100; i++) _release('core-v4.1.$i-derbent.1')];
+      final c = _FakeHttpClient.pages([page, page, page, page, page, page, page]);
+      await _repo(c, connected: true).getLatestVersion().run();
+      expect(c.proxyOnlyFlags, [true, true, true, true, true]);
+    });
+
     test('connected and proxy fails: AppUpdateFailure, no direct retry', () async {
       final c = _FakeHttpClient.pages([[]], throwOnPage: 1);
       final r = await _repo(c, connected: true).getLatestVersion().run();
@@ -112,7 +119,7 @@ void main() {
 
     test('an empty page ends the loop: no update', () async {
       final c = _FakeHttpClient.pages([
-        [_release('core-v4.1.0-derbent.1')],
+        [for (var i = 0; i < 100; i++) _release('core-v4.1.$i-derbent.1')],
         [],
       ]);
       final r = await _repo(c).getLatestVersion().run();
@@ -139,6 +146,16 @@ void main() {
       final r = await _repo(c).getLatestVersion().run();
       expect(r.getOrElse((_) => throw StateError('left')), isNull);
       expect(c.requestedUrls.length, 5);
+    });
+
+    test('a short page (under 100) ends the loop without another request', () async {
+      final c = _FakeHttpClient.pages([
+        [_release('core-v4.1.0-derbent.1')],
+        [_release('v4.1.2-derbent.1')],
+      ]);
+      final r = await _repo(c).getLatestVersion().run();
+      expect(r.getOrElse((_) => throw StateError('left')), isNull);
+      expect(c.requestedUrls.length, 1);
     });
 
     test('stable-only skips a pre-release on page 1 and finds the stable on page 2', () async {
