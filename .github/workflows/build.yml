@@ -237,6 +237,28 @@ jobs:
         run: |
           make ${{ matrix.platform }}-prepare
 
+      # Derbent: stamp N of v<x.y.z>-derbent.<N>[.dev] into the app (Makefile passes it as
+      # --dart-define=DERBENT_RELEASE). Untagged CI builds ("draft") are 0. Any other tag, or a tag
+      # whose x.y.z differs from pubspec.yaml, fails the build: a wrong N breaks update detection.
+      - name: Derbent release number from TAG_NAME
+        shell: bash
+        run: |
+          if [[ "$TAG_NAME" == "draft" ]]; then
+            n=0
+          elif [[ "$TAG_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-derbent\.([0-9]+)(\.dev)?$ ]]; then
+            n="${BASH_REMATCH[2]}"
+            pubspec_version=$(sed -E -n 's/^version: *([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' pubspec.yaml)
+            if [[ "${BASH_REMATCH[1]}" != "$pubspec_version" ]]; then
+              echo "::error::tag $TAG_NAME does not match pubspec.yaml version $pubspec_version"
+              exit 1
+            fi
+          else
+            echo "::error::TAG_NAME '$TAG_NAME' is not v<x.y.z>-derbent.<N>[.dev]"
+            exit 1
+          fi
+          echo "DERBENT_RELEASE=$n" >> "$GITHUB_ENV"
+          echo "DERBENT_RELEASE=$n"
+
 
       - name: Build ${{ matrix.platform }}
         run: |

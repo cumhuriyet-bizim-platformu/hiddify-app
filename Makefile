@@ -59,7 +59,11 @@ else
 endif
 
 BUILD_ARGS=
-DISTRIBUTOR_ARGS=--skip-clean --build-target $(TARGET)
+# Derbent: N of the release tag v<x.y.z>-derbent.<N>. build.yml exports DERBENT_RELEASE from TAG_NAME;
+# local and dev builds default to 0. Read in the app as Constants.derbentRelease.
+DERBENT_RELEASE ?= 0
+DERBENT_DEFINE=--build-dart-define=DERBENT_RELEASE=$(DERBENT_RELEASE)
+DISTRIBUTOR_ARGS=--skip-clean --build-target $(TARGET) $(DERBENT_DEFINE)
 
 
 
@@ -263,6 +267,7 @@ android-apk-release:
 	  --platform android \
 	  --targets apk \
 	  --skip-clean \
+	  $(DERBENT_DEFINE) \
 	  --build-target=$(TARGET) \
 	  --build-target-platform=android-arm,android-arm64,android-x64
 	ls -R build/app/outputs
@@ -272,6 +277,7 @@ android-aab-release:
 	  --platform android \
 	  --targets aab \
 	  --skip-clean \
+	  $(DERBENT_DEFINE) \
 	  --build-target=$(TARGET) \
 	  --build-dart-define=release=google-play
 
@@ -282,6 +288,7 @@ windows-zip-release:
 	  --platform windows \
 	  --targets zip \
 	  --skip-clean \
+	  $(DERBENT_DEFINE) \
 	  --build-target=$(TARGET) \
 	  --build-dart-define=portable=true
 	@FULL_PATH=$$(ls dist/*/*.zip | head -n 1); \
@@ -303,6 +310,7 @@ windows-exe-release:
 	  --platform windows \
 	  --targets exe \
 	  --skip-clean \
+	  $(DERBENT_DEFINE) \
 	  --build-target=$(TARGET)
 
 windows-msix-release:
@@ -310,6 +318,7 @@ windows-msix-release:
 	  --platform windows \
 	  --targets msix \
 	  --skip-clean \
+	  $(DERBENT_DEFINE) \
 	  --build-target=$(TARGET)
 
 linux-release: linux-deb-release linux-appimage-release
@@ -323,6 +332,7 @@ linux-deb-release:
 	--platform linux \
 	--targets deb \
 	--skip-clean \
+	$(DERBENT_DEFINE) \
 	--build-target=$(TARGET)
 
 
@@ -360,6 +370,7 @@ linux-appimage-release:
 	--platform linux \
 	--targets appimage \
 	--skip-clean \
+	$(DERBENT_DEFINE) \
 	--build-target=$(TARGET)
 	@$(YELLOW)Post-processing AppImage$(DONE); \
 	$(BLUE)Extracting AppImage$(DONE); \
@@ -440,6 +451,7 @@ linux-docker-release:
 		-v $(DOCKER_FLUTTER_VOL)://root/develop/flutter \
 		-v $(DOCKER_PUB_VOL)://root/.pub-cache \
 		-e APPIMAGE_EXTRACT_AND_RUN=1 \
+		-e DERBENT_RELEASE=$(DERBENT_RELEASE) \
 		$(DOCKER_IMAGE_NAME) \
 		//bin/bash -c "$(DOCKER_CMD)"
 

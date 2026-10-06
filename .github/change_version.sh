@@ -13,10 +13,11 @@ cstr_version=`echo "${cversion_string}" | sed -E -n 's/ *([0-9]+\.[0-9]+\.[0-9]+
 [ "$cversion_string" == "" ] && { echo "getting old version error"; exit 1 ; }
 cbuild_number=`echo "${cversion_string}" | sed -E -n 's/.*\+([0-9]+)$/\1/p'`
 echo "Current Version Name:${cstr_version}   Build Number:${cbuild_number}"
-read -p "new Version? (provide the next x.y.z semver) : " TAG 
+# Derbent: release tags are v<upstream x.y.z>-derbent.<N>; a trailing .dev marks a pre-release.
+read -p "new tag? (v<x.y.z>-derbent.<N> or v<x.y.z>-derbent.<N>.dev) : " TAG 
 echo $TAG 
-[[ "$TAG" =~ ^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}(\.dev)?$ ]] || { echo "Incorrect tag. e.g., 1.2.3 or 1.2.3.dev"; exit 1; } 
-IFS="." read -r -a VERSION_ARRAY <<< "$TAG" 
+[[ "$TAG" =~ ^v([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2})-derbent\.([0-9]+)(\.dev)?$ ]] || { echo "Incorrect tag. e.g., v4.1.2-derbent.1 or v4.1.2-derbent.1.dev"; exit 1; } 
+VERSION_ARRAY=("${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}") 
 VERSION_STR="${VERSION_ARRAY[0]}.${VERSION_ARRAY[1]}.${VERSION_ARRAY[2]}" 
 BUILD_NUMBER=$(( ${VERSION_ARRAY[0]} * 10000 + ${VERSION_ARRAY[1]} * 100 + ${VERSION_ARRAY[2]} )) 
 echo "version: ${VERSION_STR}+${BUILD_NUMBER}" 
@@ -32,8 +33,8 @@ gitchangelog > HISTORY.md || { git tag -d ${TAG}; echo "Please run pip install g
 git tag -d ${TAG} > /dev/null 
 git add hiddify-core dependencies.properties ios/Runner.xcodeproj/project.pbxproj pubspec.yaml windows/packaging/msix/make_config.yaml HISTORY.md 
 git commit -m "release: version ${TAG}" 
-echo "creating git tag : v${TAG}" 
+echo "creating git tag : ${TAG}" 
 git push 
-git tag v${TAG} 
+git tag ${TAG} 
 git push -u origin HEAD --tags 
 echo "Github Actions will detect the new tag and release the new version."

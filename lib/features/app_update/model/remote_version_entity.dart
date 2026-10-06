@@ -10,6 +10,8 @@ class RemoteVersionEntity with _$RemoteVersionEntity {
   const factory RemoteVersionEntity({
     required String version,
     required String buildNumber,
+    // Derbent: the <N> of the release tag v<x.y.z>-derbent.<N>.
+    required int derbentRelease,
     required String releaseTag,
     required bool preRelease,
     required String url,
@@ -17,5 +19,7 @@ class RemoteVersionEntity with _$RemoteVersionEntity {
     required Environment flavor,
   }) = _RemoteVersionEntity;
 
-  String get presentVersion => flavor == Environment.prod ? version : "$version ${flavor.name}";
+  // Derbent: include the release number, since several releases share one upstream version.
+  String get presentVersion =>
+      flavor == Environment.prod ? "$version-derbent.$derbentRelease" : "$version-derbent.$derbentRelease ${flavor.name}";
 }

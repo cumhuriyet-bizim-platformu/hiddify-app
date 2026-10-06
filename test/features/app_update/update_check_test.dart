@@ -35,8 +35,8 @@ void main() {
 
   group('GithubReleaseParser.isAppRelease', () {
     test('app tags are kept', () {
-      expect(GithubReleaseParser.isAppRelease(_release('v4.1.2')), isTrue);
-      expect(GithubReleaseParser.isAppRelease(_release('v4.1.3.dev', pre: true)), isTrue);
+      expect(GithubReleaseParser.isAppRelease(_release('v4.1.2-derbent.1')), isTrue);
+      expect(GithubReleaseParser.isAppRelease(_release('v4.1.3-derbent.1.dev', pre: true)), isTrue);
     });
     test('core and server tags in derbent-releases are ignored', () {
       expect(GithubReleaseParser.isAppRelease(_release('core-v4.1.0-derbent.1')), isFalse);
@@ -44,7 +44,7 @@ void main() {
       expect(GithubReleaseParser.isAppRelease({'prerelease': false}), isFalse);
     });
     test('an app tag still parses', () {
-      expect(GithubReleaseParser.parse(_release('v4.1.2')).version, '4.1.2');
+      expect(GithubReleaseParser.parse(_release('v4.1.2-derbent.1')).version, '4.1.2');
     });
   });
 }

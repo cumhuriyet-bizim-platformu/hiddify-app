@@ -11,6 +11,9 @@ abstract class Constants {
   // --dart-define=privacy_url=... / --dart-define=terms_url=...
   static const privacyPolicyUrl = String.fromEnvironment("privacy_url");
   static const termsAndConditionsUrl = String.fromEnvironment("terms_url");
+  // Derbent: the <N> of this build's release tag v<x.y.z>-derbent.<N>. Release builds stamp it with
+  // --dart-define=DERBENT_RELEASE=<N> (build.yml derives it from TAG_NAME); local and dev builds are 0.
+  static const derbentRelease = int.fromEnvironment("DERBENT_RELEASE");
   static const cfWarpPrivacyPolicy = "https://www.cloudflare.com/application/privacypolicy/";
   static const cfWarpTermsOfService = "https://www.cloudflare.com/application/terms/";
 }

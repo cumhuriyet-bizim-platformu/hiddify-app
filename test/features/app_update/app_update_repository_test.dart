@@ -51,18 +51,18 @@ void main() {
     final client = _FakeHttpClient([
       _release('core-v4.1.0-derbent.1'),
       _release('server-v11.0.0'),
-      _release('v4.1.3.dev', pre: true),
-      _release('v4.1.2'),
+      _release('v4.1.3-derbent.1.dev', pre: true),
+      _release('v4.1.2-derbent.1'),
     ]);
     final result = await _repo(client).getLatestVersion().run();
     expect(result.getOrElse((_) => throw StateError('expected right'))?.version, '4.1.2');
 
     final withPre = await _repo(client).getLatestVersion(includePreReleases: true).run();
-    expect(withPre.getOrElse((_) => throw StateError('expected right'))?.releaseTag, 'v4.1.3.dev');
+    expect(withPre.getOrElse((_) => throw StateError('expected right'))?.releaseTag, 'v4.1.3-derbent.1.dev');
   });
 
   test('requests 100 releases per page without altering the pinned base URL', () async {
-    final client = _FakeHttpClient([_release('v4.1.2')]);
+    final client = _FakeHttpClient([_release('v4.1.2-derbent.1')]);
     await _repo(client).getLatestVersion().run();
     expect(client.requestedUrls, ['${Constants.githubReleasesApiUrl}?per_page=100&page=1']);
   });
