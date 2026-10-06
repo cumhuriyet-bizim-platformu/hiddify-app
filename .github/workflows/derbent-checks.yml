@@ -2,11 +2,8 @@ name: derbent-checks
 
 # Derbent-only checks for the derbent branch. Every action is pinned to a full commit SHA
 # (the version is in the trailing comment).
+# Derbent: manual only (Actions minutes are limited). Run from the Actions tab.
 on:
-  push:
-    branches: [derbent]
-  pull_request:
-    branches: [derbent]
   workflow_dispatch:
 
 permissions:

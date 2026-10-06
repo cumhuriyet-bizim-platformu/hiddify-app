@@ -1,8 +1,8 @@
 name: Mark stale issues and pull requests
 
+# Derbent: manual only (Actions minutes are limited).
 on:
-  schedule:
-    - cron: "30 8 * * *"
+  workflow_dispatch:
 
 jobs:
   stale:
