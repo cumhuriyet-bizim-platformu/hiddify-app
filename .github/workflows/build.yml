@@ -79,10 +79,12 @@ jobs:
             aarch: amd64
             targets: exe,msix,zip
 
-          - platform: linux
-            os: ubuntu-22.04
-            aarch: amd64
-            targets: deb,gz,AppImage
+          # Derbent: only Android and Windows are built for now (owner decision 2026-10-07,
+          # Actions minutes are limited). Re-enable linux/macos by uncommenting.
+          # - platform: linux
+          #   os: ubuntu-22.04
+          #   aarch: amd64
+          #   targets: deb,gz,AppImage
 
           # - platform: linux-amd64
           #   os: ubuntu-22.04
@@ -94,10 +96,10 @@ jobs:
           #   aarch: arm64
           #   targets: deb,gz
 
-          - platform: macos
-            os: macos-15
-            aarch: universal
-            targets: dmg,pkg
+          # - platform: macos
+          #   os: macos-15
+          #   aarch: universal
+          #   targets: dmg,pkg
             
           # - platform: ios
           #   os: macos-15
