@@ -266,7 +266,7 @@ jobs:
 
       - name: Code Sign
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
-        uses: hiddify/signtool-code-sign-sha256@edf131ad76c36ab1a9b468cdfa02acafd8a2a499 # main @ 2026-10-03
+        uses: cumhuriyet-bizim-platformu/signtool-code-sign-sha256@edf131ad76c36ab1a9b468cdfa02acafd8a2a499 # forked from hiddify @ edf131ad, reviewed 2026-10-06
         with:
           certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
           cert-password: '${{ secrets.WINDOWS_SIGNING_PASSWORD }}'
