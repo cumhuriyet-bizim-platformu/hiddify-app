@@ -25,6 +25,9 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
   static const statusChannel = EventChannel("$channelPrefix/service.status", JSONMethodCodec());
   static const alertsChannel = EventChannel("$channelPrefix/service.alerts", JSONMethodCodec());
 
+  /// How long the first start may take, including the system permission dialogs.
+  static const startWait = Duration(seconds: 90);
+
   late Uint8List serverPublicKey;
   static final cert = CryptoUtils.generateEcKeyPair();
 
@@ -116,13 +119,19 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
 
     _isBgClientAvailable = true;
     loggy.info("Waiting for starting core");
-    for (var i = 0; i < 20; i++) {
+    // Derbent: the first connect shows Android's notification and VPN-consent dialogs before the
+    // service starts. Wait on a deadline long enough for a person to answer them (the old budget of
+    // ~9 s ran out while the dialogs were open and reported "starting background core..."), and stop
+    // waiting as soon as the service reports Started.
+    final deadline = DateTime.now().add(startWait);
+    wait:
+    while (DateTime.now().isBefore(deadline)) {
       try {
         final res = await _status.get(timeout: const Duration(seconds: 1));
 
         switch (res) {
           case CoreStarted():
-            break;
+            break wait;
           case CoreStopped():
             if (res.isInformationalAlert) {
               // Missing notification permission: not a failure, keep waiting for the core.
