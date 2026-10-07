@@ -72,12 +72,20 @@ sealed class CoreStatus with _$CoreStatus {
     }
   }
 
+  /// Alerts that never stop or fail a connection; the UI only shows a note.
+  bool get isInformationalAlert => switch (this) {
+    CoreStopped(alert: CoreAlert.requestNotificationPermission) => true,
+    _ => false,
+  };
+
   ConnectionFailure? getCoreAlert() {
     return switch (this) {
       CoreStopped(alert: final alert, message: final message) when alert != null => switch (alert) {
         CoreAlert.emptyConfiguration => ConnectionFailure.invalidConfig(message),
 
-        CoreAlert.requestNotificationPermission => ConnectionFailure.missingNotificationPermission(message),
+        // Informational only: the VPN runs without notification permission, the
+        // notification is just hidden. See isInformationalAlert.
+        CoreAlert.requestNotificationPermission => null,
 
         CoreAlert.requestVPNPermission => ConnectionFailure.missingVpnPermission(message),
 

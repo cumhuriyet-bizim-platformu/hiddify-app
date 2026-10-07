@@ -633,6 +633,7 @@
       "unexpected": "Unexpected failure",
       "missingVpnPermission": "Missing VPN permission",
       "missingNotificationPermission": "Missing notification permission",
+      "notificationHidden": "The connection works. Without notification permission, Android hides the VPN notification; you can allow it in system settings.",
       "core": "Core error"
     },
     "singbox": {

@@ -61,7 +61,15 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
     @SuppressLint("NewApi")
     fun startService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ServiceNotification.checkPermission()) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            // The VPN never needs POST_NOTIFICATIONS: without it the foreground
+            // notification is only hidden. Ask once per process, never block on it.
+            if (!notificationPermissionAsked) {
+                notificationPermissionAsked = true
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return
+            }
+            startService0()
+            onServiceAlert(Alert.RequestNotificationPermission, null)
             return
         }
         startService0()
@@ -99,14 +107,17 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
             true
         }
     }
+    private var notificationPermissionAsked = false
+
     private val notificationPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission(),
         ) { isGranted ->
-            if (Settings.dynamicNotification && !isGranted) {
+            // Granted or not, the service starts. A denial only raises an informational
+            // alert (the app shows a note; it is not a failure).
+            startService0()
+            if (!isGranted) {
                 onServiceAlert(Alert.RequestNotificationPermission, null)
-            } else {
-                startService0()
             }
         }
 

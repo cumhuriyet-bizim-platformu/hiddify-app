@@ -6,6 +6,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:grpc/grpc.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/model/directories.dart';
+import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
@@ -144,6 +145,15 @@ class HiddifyCoreService with InfraLogger {
       if (background != const CoreStatus.started()) {
         statusController.add(currentState = const CoreStatus.stopped());
         return left(background.getCoreAlert() ?? const ConnectionFailure.unexpected("failed to start core"));
+      }
+      if (core.notificationHidden) {
+        final t = ref.read(translationsProvider).valueOrNull;
+        if (t != null) {
+          ref.read(inAppNotificationControllerProvider).showInfoToast(
+            t.errors.connectivity.notificationHidden,
+            duration: const Duration(seconds: 6),
+          );
+        }
       }
       if (!core.isSingleChannel()) {
         await startListeningLogs("bg", core.bgClient);

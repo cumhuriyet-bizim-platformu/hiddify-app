@@ -105,6 +105,7 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
     // if (!await waitUntilPort(portBack, false, stop)) return const CoreStatus.stopped(alert: CoreAlert.createService);
     if (!await stop()) return const CoreStatus.stopped(alert: CoreAlert.createService);
     _status.clean();
+    notificationHidden = false;
     await methodChannel.invokeMethod("start", {
       "path": path,
       "name": name,
@@ -123,7 +124,10 @@ class CoreInterfaceMobile extends CoreInterface with InfraLogger {
           case CoreStarted():
             break;
           case CoreStopped():
-            if (res.alert != null) {
+            if (res.isInformationalAlert) {
+              // Missing notification permission: not a failure, keep waiting for the core.
+              notificationHidden = true;
+            } else if (res.alert != null) {
               return res;
             }
 

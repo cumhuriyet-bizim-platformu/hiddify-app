@@ -6,6 +6,10 @@ class CoreInterface {
   late CoreClient fgClient;
   late CoreClient bgClient;
 
+  /// Set when the platform reported that the notification permission is missing
+  /// (the VPN still runs; its notification is hidden).
+  bool notificationHidden = false;
+
   Future<String> setup(Directories directories, bool debug, int mode) async {
     return "";
   }

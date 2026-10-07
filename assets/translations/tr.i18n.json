@@ -630,6 +630,7 @@
       "unexpected": "Beklenmeyen hata",
       "missingVpnPermission": "VPN izni eksik",
       "missingNotificationPermission": "Bildirim izni eksik",
+      "notificationHidden": "Bağlantı çalışıyor. Bildirim izni olmadığı için Android VPN bildirimini gizler; isterseniz sistem ayarlarından izin verebilirsiniz.",
       "core": "Çekirdek hatası"
     },
     "singbox": {
