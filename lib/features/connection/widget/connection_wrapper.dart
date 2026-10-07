@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
+import 'package:hiddify/features/connection/notifier/dead_tunnel_watcher.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
@@ -20,6 +21,8 @@ class _ConnectionWrapperState extends ConsumerState<ConnectionWrapper> with AppL
   @override
   Widget build(BuildContext context) {
     ref.listen(connectionNotifierProvider, (_, _) {});
+    // Derbent: keep the dead-tunnel watcher alive for the session (refresh + reconnect when every server is dead).
+    ref.listen(deadTunnelWatcherProvider, (_, _) {});
 
     ref.listen(configOptionNotifierProvider, (previous, next) async {
       if (next case AsyncData(value: true)) {

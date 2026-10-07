@@ -160,6 +160,8 @@ class ProfileParser {
           url.trim(),
           tempFilePath,
           cancelToken: cancelToken,
+          // Derbent: subscription fetch; one direct retry on a network error through the tunnel.
+          directRetry: true,
           userAgent: _ref.read(ConfigOptions.useXrayCoreWhenPossible)
               ? _httpClient.userAgent.replaceAll("HiddifyNext", "HiddifyNextX")
               : null,
@@ -218,6 +220,8 @@ class ProfileParser {
             line,
             tmpPath,
             cancelToken: cancelToken,
+            // Derbent: a remote line of a subscription is subscription content too.
+            directRetry: true,
             userAgent: ref.read(ConfigOptions.useXrayCoreWhenPossible)
                 ? httpClient.userAgent.replaceAll('HiddifyNext', 'HiddifyNextX')
                 : null,
