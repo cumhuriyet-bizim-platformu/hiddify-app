@@ -1,6 +1,7 @@
 import 'package:hiddify/core/db/provider/db_providers.dart';
 import 'package:hiddify/core/directories/directories_provider.dart';
 import 'package:hiddify/core/http_client/http_client_provider.dart';
+import 'package:hiddify/features/profile/data/core_options_builder.dart';
 import 'package:hiddify/features/profile/data/profile_data_source.dart';
 import 'package:hiddify/features/profile/data/profile_parser.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
@@ -19,8 +20,8 @@ Future<ProfileRepository> profileRepository(Ref ref) async {
     profileDataSource: ref.watch(profileDataSourceProvider),
     profilePathResolver: ref.watch(profilePathResolverProvider),
     singbox: ref.watch(hiddifyCoreServiceProvider),
-    configOptionRepository: ref.watch(configOptionRepositoryProvider),
     profileParser: ref.watch(profileParserProvider),
+    optionsBuilder: ref.watch(coreOptionsBuilderProvider),
     routingRefresher: RoutingListRefresher(
       store: ref.watch(routingListStoreProvider),
       download: routingDownloadVia(ref.watch(httpClientProvider)),
@@ -48,4 +49,13 @@ ProfileParser profileParser(Ref ref) {
 /// Derbent: the panel's routing list, stored in the profile directory next to each profile.
 final routingListStoreProvider = Provider<RoutingListStore>(
   (ref) => RoutingListStore(ref.watch(profilePathResolverProvider).directory),
+);
+
+/// Derbent: builds the core options (settings, profile override, then the routing list) for every
+/// path that sends options to the core.
+final coreOptionsBuilderProvider = Provider<CoreOptionsBuilder>(
+  (ref) => CoreOptionsBuilder(
+    configOptionRepository: ref.watch(configOptionRepositoryProvider),
+    store: ref.watch(routingListStoreProvider),
+  ),
 );

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
@@ -38,11 +39,17 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     });
 
     ref.listen(activeProfileProvider.select((value) => value.asData?.value), (previous, next) async {
-      if (previous == null) return;
-      final shouldReconnect = next == null || previous.id != next.id;
-      if (shouldReconnect) {
-        await reconnect(next);
-      }
+      await onActiveProfileChanged(
+        previous: previous,
+        next: next,
+        connected: state.valueOrNull?.isConnected ?? false,
+        reconnect: reconnect,
+        refreshCoreOptions: (profile) async {
+          await _connectionRepo.refreshCoreOptions(profile).mapLeft((err) {
+            loggy.warning("could not hand the new profile's options to the core", err);
+          }).run();
+        },
+      );
     });
     ref.watch(coreRestartSignalProvider);
 
@@ -159,6 +166,24 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
       state = AsyncError(err, StackTrace.current);
     }).run();
   }
+}
+
+/// The active profile changed. Connected: reconnect with it. Disconnected: hand the core the new
+/// profile's options anyway (Derbent), because the core reuses the last options it was given for
+/// starts that bypass the app (Android boot, quick-settings tile).
+@visibleForTesting
+Future<void> onActiveProfileChanged({
+  required ProfileEntity? previous,
+  required ProfileEntity? next,
+  required bool connected,
+  required Future<void> Function(ProfileEntity? profile) reconnect,
+  required Future<void> Function(ProfileEntity profile) refreshCoreOptions,
+}) async {
+  if (previous == null) return;
+  final changed = next == null || previous.id != next.id;
+  if (!changed) return;
+  if (connected || next == null) return reconnect(next);
+  await refreshCoreOptions(next);
 }
 
 @Riverpod(keepAlive: true)

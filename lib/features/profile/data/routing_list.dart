@@ -11,6 +11,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -93,20 +94,29 @@ abstract final class RoutingListValidator {
   static const maxBytes = 256 * 1024;
   static const maxEntries = 2000;
   static const allowedKeys = {'domain', 'domain_suffix', 'ip_cidr'};
+  static const minPrefixV4 = 8;
+  static const minPrefixV6 = 16;
 
   // Same rule as the panel (hutils/routing/lists.py): lower-case labels of [a-z0-9-]{1,63} not
   // starting or ending with "-", at least two labels, at most 253 chars, no all-digit TLD.
   static final _label = RegExp(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$');
   static final _prefix = RegExp(r'^[0-9]{1,3}$');
 
-  /// The URL checks alone: https, and the subscription's own host.
+  /// The URL checks alone: https, and the subscription's own host and port (no port means 443).
   static RoutingRejected? checkUrl(RoutingHeader h, Uri subscriptionUrl) {
     if (h.url.scheme.toLowerCase() != 'https') return RoutingRejected(RoutingRejection.scheme, h.url.scheme);
     if (h.url.host.toLowerCase() != subscriptionUrl.host.toLowerCase()) {
       return RoutingRejected(RoutingRejection.host, '${h.url.host} != ${subscriptionUrl.host}');
     }
+    if (_port(h.url) != _port(subscriptionUrl)) {
+      return RoutingRejected(RoutingRejection.host, 'port ${_port(h.url)} != ${_port(subscriptionUrl)}');
+    }
     return null;
   }
+
+  // Dart makes a scheme's default port implicit (`https://h:443` has no port), so an absent port is
+  // read as 443 on both sides.
+  static int _port(Uri u) => u.hasPort ? u.port : 443;
 
   static RoutingValidation validate(Uint8List body, RoutingHeader h, Uri subscriptionUrl) {
     if (checkUrl(h, subscriptionUrl) case final rejected?) return rejected;
@@ -170,7 +180,9 @@ abstract final class RoutingListValidator {
     final addr = InternetAddress.tryParse(parts[0]);
     if (addr == null) return false;
     final prefix = int.parse(parts[1]);
-    return prefix <= (addr.type == InternetAddressType.IPv4 ? 32 : 128);
+    // A catch-all (0.0.0.0/0, ::/0) or near catch-all range would send almost everything one way.
+    final (lo, hi) = addr.type == InternetAddressType.IPv4 ? (minPrefixV4, 32) : (minPrefixV6, 128);
+    return prefix >= lo && prefix <= hi;
   }
 }
 
@@ -201,9 +213,13 @@ class RoutingListState {
 ///
 /// One file name per mode: the core reloads a local rule-set when its file changes, so a new list
 /// of the same mode takes effect live, while a list of the other mode never lands in the file a
-/// running core (built for the old mode) is watching; that one is removed and the new mode applies
-/// at the next connect. The stored config file (`<id>.json`) is untouched, so the dead-tunnel
-/// watcher's "content changed" comparison never sees the list.
+/// running core (built for the old mode) is watching; the new mode applies at the next connect.
+///
+/// Files are never removed when a list is replaced or dropped (only the meta changes), because the
+/// running core and the options it persisted for background starts may still point at them. They
+/// are removed by [prune] after the next successful start, or by [remove] when the profile is
+/// deleted. The stored config file (`<id>.json`) is untouched, so the dead-tunnel watcher's
+/// "content changed" comparison never sees the list.
 class RoutingListStore {
   RoutingListStore(Directory dir) : _dir = dir.absolute;
 
@@ -213,7 +229,8 @@ class RoutingListStore {
 
   File _meta(String profileId) => File(p.join(_dir.path, '$profileId.routing.meta.json'));
 
-  File downloadFile(String profileId) => File(p.join(_dir.path, '$profileId.routing.download'));
+  /// A fresh name per download, so two refreshes can never write the same temporary file.
+  File downloadFile(String profileId) => File(p.join(_dir.path, '$profileId.routing.${_suffix()}.download'));
 
   Future<RoutingListState> save(
     String profileId,
@@ -229,9 +246,6 @@ class RoutingListStore {
       path: pathFor(profileId, mode),
     );
     await _writeAtomic(File(state.path), body);
-    for (final other in RoutingMode.values.where((m) => m != mode)) {
-      await _deleteIfExists(File(pathFor(profileId, other)));
-    }
     await _writeAtomic(
       _meta(profileId),
       utf8.encode(jsonEncode({'mode': mode.name, 'count': count, 'sha256': state.sha256})),
@@ -258,16 +272,37 @@ class RoutingListStore {
     }
   }
 
-  Future<void> clear(String profileId) async {
+  /// No list for the profile any more: the next connect is full VPN. The rule-set files stay until
+  /// [prune] runs after that connect, so a running core keeps the file it was started with.
+  Future<void> clear(String profileId) => _deleteIfExists(_meta(profileId));
+
+  /// Removes the profile's rule-set files except [keep] (the file the core was just started with)
+  /// and the file the stored list points at. Call only after a successful start.
+  Future<void> prune(String profileId, {String? keep}) async {
+    String? stored;
+    try {
+      final m = jsonDecode(await _meta(profileId).readAsString()) as Map<String, dynamic>;
+      stored = pathFor(profileId, RoutingMode.values.byName(m['mode'] as String));
+    } catch (_) {}
+    for (final mode in RoutingMode.values) {
+      final path = pathFor(profileId, mode);
+      if (path != keep && path != stored) await _deleteIfExists(File(path));
+    }
+  }
+
+  /// Everything for a deleted profile.
+  Future<void> remove(String profileId) async {
     await _deleteIfExists(_meta(profileId));
     for (final mode in RoutingMode.values) {
       await _deleteIfExists(File(pathFor(profileId, mode)));
     }
-    await _deleteIfExists(downloadFile(profileId));
   }
 
+  static final _random = Random.secure();
+  static String _suffix() => List.generate(8, (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+
   static Future<void> _writeAtomic(File f, List<int> bytes) async {
-    final tmp = File('${f.path}.tmp');
+    final tmp = File('${f.path}.${_suffix()}.tmp');
     await tmp.writeAsBytes(bytes, flush: true);
     await tmp.rename(f.path);
   }
@@ -317,10 +352,29 @@ class RoutingListRefresher with InfraLogger {
 
   final RoutingListStore store;
   final RoutingDownload _download;
+  final _running = <String, Future<void>>{};
 
   /// Runs after every successful subscription refresh. Returns the list now in effect, or null
-  /// (full VPN). Never throws for a bad list.
+  /// (full VPN). Never throws for a bad list. Refreshes of one profile run one after another (the
+  /// dead-tunnel watcher and the update scheduler can both start one).
   Future<RoutingListState?> refresh({
+    required String profileId,
+    required Uri subscriptionUrl,
+    required String? rawHeader,
+  }) {
+    final previous = _running[profileId] ?? Future<void>.value();
+    final next = previous.then(
+      (_) => _refresh(profileId: profileId, subscriptionUrl: subscriptionUrl, rawHeader: rawHeader),
+    );
+    final done = next.then<void>((_) {}, onError: (_) {});
+    _running[profileId] = done;
+    done.then((_) {
+      if (identical(_running[profileId], done)) _running.remove(profileId);
+    });
+    return next;
+  }
+
+  Future<RoutingListState?> _refresh({
     required String profileId,
     required Uri subscriptionUrl,
     required String? rawHeader,

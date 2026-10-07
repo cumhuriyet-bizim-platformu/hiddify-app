@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/features/connection/data/connection_repository.dart';
 import 'package:hiddify/features/home/widget/routing_status_line.dart';
 import 'package:hiddify/features/profile/data/routing_list.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-Future<void> pumpLine(WidgetTester tester, RoutingListState? state) async {
+Future<void> pumpLine(WidgetTester tester, RoutingListState? state, {AppliedRouting? applied}) async {
   final container = ProviderContainer(
     overrides: [
       translationsProvider.overrideWith((ref) => AppLocale.en.buildSync()),
-      routingStatusProvider.overrideWith((ref) => state),
+      routingStatusProvider.overrideWith((ref) => RoutingStatus(state, applied: applied)),
     ],
   );
   addTearDown(container.dispose);
@@ -42,5 +43,10 @@ void main() {
     await pumpLine(tester, null);
     expect(find.byType(Text), findsNothing);
     expect(find.textContaining('Whitelist'), findsNothing);
+  });
+
+  testWidgets('stored mode differs from the running one → "applies at the next connect"', (tester) async {
+    await pumpLine(tester, state(RoutingMode.whitelist, 42), applied: const AppliedRouting('p1', RoutingMode.full));
+    expect(find.text('Whitelist: 42 sites via VPN, the rest direct (applies at the next connect)'), findsOneWidget);
   });
 }

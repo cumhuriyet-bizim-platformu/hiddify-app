@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -8,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/core/http_client/dio_http_client.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
+import 'package:hiddify/features/connection/data/connection_repository.dart';
 import 'package:hiddify/features/home/widget/routing_status_line.dart';
 import 'package:hiddify/features/profile/data/profile_parser.dart';
 import 'package:hiddify/features/profile/data/routing_list.dart';
@@ -99,6 +101,18 @@ void main() {
       final b = listBody();
       final v = RoutingListValidator.validate(b, header(b, url: 'https://evil.example.net/p/uuid-1/routing.json'), sub);
       expect(rejection(v), RoutingRejection.host);
+    });
+
+    test('the port must be the subscription port (no port means 443)', () {
+      final b = listBody();
+      final other = header(b, url: 'https://sub.example.com:8443/p/uuid-1/routing.json');
+      expect(rejection(RoutingListValidator.validate(b, other, sub)), RoutingRejection.host);
+      expect(RoutingListValidator.checkUrl(other, sub), isNotNull);
+      final explicit443 = header(b, url: 'https://sub.example.com:443/p/uuid-1/routing.json');
+      expect(RoutingListValidator.validate(b, explicit443, sub), isA<RoutingOk>());
+      final sub8443 = Uri.parse('https://sub.example.com:8443/p/uuid-1/');
+      expect(RoutingListValidator.validate(b, other, sub8443), isA<RoutingOk>());
+      expect(rejection(RoutingListValidator.validate(b, header(b), sub8443)), RoutingRejection.host);
     });
 
     test('http is rejected', () {
@@ -196,6 +210,19 @@ void main() {
     });
   });
 
+  group('catch-all CIDRs', () {
+    test('shorter than /8 (IPv4) or /16 (IPv6) is rejected', () {
+      for (final bad in ['0.0.0.0/0', '0.0.0.0/1', '128.0.0.0/7', '::/0', '2000::/3', '2a00::/15']) {
+        final b = listBody(cidr: [bad]);
+        expect(rejection(RoutingListValidator.validate(b, header(b), sub)), RoutingRejection.cidr, reason: bad);
+      }
+      for (final ok in ['10.0.0.0/8', '1.2.3.4/32', '2a01::/16', '2a01:4f8::1/128']) {
+        final b = listBody(cidr: [ok]);
+        expect(RoutingListValidator.validate(b, header(b), sub), isA<RoutingOk>(), reason: ok);
+      }
+    });
+  });
+
   group('refresh flow', () {
     late Directory dir;
     late RoutingListStore store;
@@ -260,7 +287,10 @@ void main() {
       );
       expect(s, isNull);
       expect(await store.current('p1'), isNull);
-      expect(File(first!.path).existsSync(), isFalse);
+      // A running core may still use it: removed only after the next start.
+      expect(File(first!.path).existsSync(), isTrue);
+      await store.prune('p1');
+      expect(File(first.path).existsSync(), isFalse);
     });
 
     test('a failed download keeps the stored file only if its hash matches the header', () async {
@@ -301,7 +331,7 @@ void main() {
       expect(await store.current('p1'), isNull);
     });
 
-    test('a mode change writes the other file and removes the old one', () async {
+    test('a mode change writes the other file and keeps the old one until the next start', () async {
       final w = listBody(suffix: ['w.example.com']);
       final s1 = await refresher(() => w).refresh(profileId: 'p1', subscriptionUrl: sub, rawHeader: raw(header(w)));
       final f = listBody(suffix: ['f.example.com']);
@@ -312,7 +342,75 @@ void main() {
       );
       expect(s2!.mode, RoutingMode.full);
       expect(s2.path, isNot(s1!.path));
+      // The running core (started in whitelist mode) still reads s1, and so do the options it
+      // persisted for background starts.
+      expect(File(s1.path).existsSync(), isTrue);
+      expect(File(s1.path).readAsBytesSync(), w);
+      // The next start keeps what it was started with and what is stored, and drops the rest.
+      await store.prune('p1', keep: s1.path);
+      expect(File(s1.path).existsSync(), isTrue);
+      await store.prune('p1', keep: s2.path);
       expect(File(s1.path).existsSync(), isFalse);
+      expect(File(s2.path).existsSync(), isTrue);
+      expect((await store.current('p1'))?.path, s2.path);
+    });
+
+    test('a mode change while connected: the status line says it applies at the next connect', () async {
+      final t = AppLocale.en.buildSync();
+      final w = listBody(suffix: ['w.example.com']);
+      await refresher(() => w).refresh(profileId: 'p1', subscriptionUrl: sub, rawHeader: raw(header(w)));
+      final f = listBody(suffix: ['f.example.com']);
+      final s2 = await refresher(() => f).refresh(
+        profileId: 'p1',
+        subscriptionUrl: sub,
+        rawHeader: raw(header(f, mode: 'full')),
+      );
+      final running = RoutingStatus(s2, applied: const AppliedRouting('p1', RoutingMode.whitelist));
+      expect(running.pending, isTrue);
+      expect(routingStatusText(t, running), 'Full VPN: 2 services direct (applies at the next connect)');
+      // After the next connect the core runs the stored mode: no note.
+      expect(
+        routingStatusText(t, RoutingStatus(s2, applied: const AppliedRouting('p1', RoutingMode.full))),
+        'Full VPN: 2 services direct',
+      );
+      // Unknown (disconnected, or a start the app did not make): the stored list, no note.
+      expect(routingStatusText(t, RoutingStatus(s2)), 'Full VPN: 2 services direct');
+      // The list was dropped while a whitelist core runs.
+      expect(
+        routingStatusText(t, const RoutingStatus(null, applied: AppliedRouting('p1', RoutingMode.whitelist))),
+        'Full VPN at the next connect',
+      );
+    });
+
+    test('two refreshes of one profile at once run one after the other', () async {
+      final a = listBody(suffix: ['a.example.com']);
+      final b = listBody(suffix: ['b.example.com']);
+      final gate = Completer<void>();
+      final paths = <String>[];
+      var inFlight = 0;
+      var maxInFlight = 0;
+      final r = RoutingListRefresher(
+        store: store,
+        download: (url, path, maxBytes) async {
+          paths.add(path);
+          inFlight++;
+          maxInFlight = inFlight > maxInFlight ? inFlight : maxInFlight;
+          final body = paths.length == 1 ? a : b;
+          if (paths.length == 1) await gate.future;
+          await File(path).writeAsBytes(body);
+          inFlight--;
+        },
+      );
+      final first = r.refresh(profileId: 'p1', subscriptionUrl: sub, rawHeader: raw(header(a)));
+      final second = r.refresh(profileId: 'p1', subscriptionUrl: sub, rawHeader: raw(header(b)));
+      await Future<void>.delayed(Duration.zero);
+      gate.complete();
+      expect((await first)?.sha256, hex(a));
+      expect((await second)?.sha256, hex(b));
+      expect(maxInFlight, 1);
+      expect(paths.toSet(), hasLength(2), reason: 'each download gets its own temporary file');
+      expect((await store.current('p1'))?.sha256, hex(b));
+      expect(dir.listSync().where((e) => e.path.endsWith('.tmp') || e.path.endsWith('.download')), isEmpty);
     });
 
     test('a stored file that was altered on disk is not used', () async {
@@ -322,10 +420,16 @@ void main() {
       expect(await store.current('p1'), isNull);
     });
 
-    test('clear removes everything for the profile', () async {
+    test('clear drops the list and leaves the file for prune; remove deletes everything', () async {
       final b = listBody();
       await refresher(() => b).refresh(profileId: 'p1', subscriptionUrl: sub, rawHeader: raw(header(b)));
       await store.clear('p1');
+      expect(await store.current('p1'), isNull);
+      expect(dir.listSync(), hasLength(1));
+      await store.prune('p1');
+      expect(dir.listSync(), isEmpty);
+      await refresher(() => b).refresh(profileId: 'p1', subscriptionUrl: sub, rawHeader: raw(header(b)));
+      await store.remove('p1');
       expect(dir.listSync(), isEmpty);
     });
 
@@ -335,7 +439,7 @@ void main() {
       final json = applyRoutingOptions(await baseOptions(), state).toJson();
       expect(json.containsKey('derbent-routing-mode'), isFalse);
       expect(json.containsKey('derbent-routing-rule-set'), isFalse);
-      expect(routingStatusText(AppLocale.en.buildSync(), state), isNull);
+      expect(routingStatusText(AppLocale.en.buildSync(), RoutingStatus(state)), isNull);
     });
 
     test('a valid list reaches the core options as mode + absolute path', () async {
@@ -412,6 +516,28 @@ void main() {
       expect(log.where((m) => m == 'direct-once'), hasLength(1));
       expect(log.where((m) => m == 'direct'), isEmpty);
       expect(redirects, everyElement(isFalse));
+    });
+
+    test('a redirect is not followed: the download fails', () async {
+      final log = <String>[];
+      final uris = <Uri>[];
+      final c = client(log, (mode, o) async {
+        uris.add(o.uri);
+        return ResponseBody.fromString(
+          '',
+          302,
+          headers: {
+            'location': ['https://evil.example.net/routing.json'],
+          },
+        );
+      });
+      await expectLater(
+        routingDownloadVia(c)(Uri.parse(listUrl), '${tmp.path}/r', RoutingListValidator.maxBytes),
+        throwsA(isA<DioException>()),
+      );
+      expect(uris, isNotEmpty);
+      expect(uris, everyElement(Uri.parse(listUrl)));
+      expect(File('${tmp.path}/r').existsSync() && File('${tmp.path}/r').lengthSync() > 0, isFalse);
     });
 
     test('a body over the cap is cut off and reported as too large', () async {

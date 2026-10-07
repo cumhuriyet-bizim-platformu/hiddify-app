@@ -96,7 +96,9 @@
       "quickSettings": "Hızlı ayarlar",
       "routing": {
         "whitelist": "Beyaz liste: $n site VPN üzerinden, gerisi doğrudan",
-        "full": "Tam VPN: $n hizmet doğrudan"
+        "full": "Tam VPN: $n hizmet doğrudan",
+        "nextConnect": "$text (bir sonraki bağlantıda geçerli)",
+        "fullNextConnect": "Bir sonraki bağlantıda tam VPN"
       }
     },
     "proxies": {

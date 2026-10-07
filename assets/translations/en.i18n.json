@@ -96,7 +96,9 @@
       "quickSettings": "Quick settings",
       "routing": {
         "whitelist": "Whitelist: $n sites via VPN, the rest direct",
-        "full": "Full VPN: $n services direct"
+        "full": "Full VPN: $n services direct",
+        "nextConnect": "$text (applies at the next connect)",
+        "fullNextConnect": "Full VPN at the next connect"
       }
     },
     "proxies": {

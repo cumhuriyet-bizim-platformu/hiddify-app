@@ -16,5 +16,7 @@ ConnectionRepository connectionRepository(Ref ref) {
     configOptionRepository: ref.watch(configOptionRepositoryProvider),
     singbox: ref.watch(hiddifyCoreServiceProvider),
     profilePathResolver: ref.watch(profilePathResolverProvider),
+    optionsBuilder: ref.watch(coreOptionsBuilderProvider),
+    routingStore: ref.watch(routingListStoreProvider),
   );
 }
