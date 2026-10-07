@@ -6,6 +6,7 @@ import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/features/profile/data/profile_parser.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
+import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,6 +68,13 @@ void main() {
       expect(c.read(ConfigOptions.directDnsAddress), 'https://1.1.1.1/dns-query');
       expect(c.read(ConfigOptions.connectionTestUrl), 'https://cp.cloudflare.com');
       expect(c.read(ConfigOptions.urlTestInterval), const Duration(seconds: 120));
+    });
+
+    test('direct DNS answers are IPv4-only by default', () async {
+      // The TUN offers IPv6 even on networks without it; a direct IPv6 dial then dies with
+      // "network is unreachable" and browsers see "connection closed" instead of falling back.
+      final c = await containerWith({});
+      expect(c.read(ConfigOptions.directDnsDomainStrategy), DomainStrategy.ipv4Only);
     });
 
     test('China keeps its direct DNS', () async {

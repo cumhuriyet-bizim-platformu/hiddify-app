@@ -103,7 +103,11 @@ abstract class ConfigOptions {
 
   static final directDnsDomainStrategy = PreferencesNotifier.create<DomainStrategy, String>(
     "direct-dns-domain-strategy",
-    DomainStrategy.auto,
+    // Derbent: IPv4-only answers for names that go direct (whitelist mode's unlisted sites, the
+    // bypass list, .tr). The TUN offers IPv6 even on networks without IPv6; a direct IPv6 dial then
+    // fails inside the core ("network is unreachable") and browsers see a closed connection instead
+    // of falling back to IPv4. Proxied names keep IPv6 through the server.
+    DomainStrategy.ipv4Only,
     mapFrom: (value) => DomainStrategy.values.firstWhere((e) => e.key == value),
     mapTo: (value) => value.key,
   );
