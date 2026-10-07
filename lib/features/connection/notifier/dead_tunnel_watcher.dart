@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/data/profile_data_providers.dart';
@@ -114,6 +116,41 @@ class DeadTunnelWatcher with InfraLogger {
   }
 }
 
+/// The panel randomises parts of every fetch (a `sec-ch-ua-platform` header, a REALITY `short_id`), so
+/// raw bytes differ almost every time. What matters for reachability is the set of
+/// (outbound type, server, server_port) over `outbounds` and `endpoints`. Returns null if [raw] is not
+/// a sing-box JSON object.
+@visibleForTesting
+String? configReachabilityFingerprint(String? raw) {
+  if (raw == null) return null;
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return null;
+    final entries = <String>{};
+    for (final key in const ['outbounds', 'endpoints']) {
+      final list = decoded[key];
+      if (list is! List) continue;
+      for (final o in list) {
+        if (o is! Map) continue;
+        entries.add('${o['type']}|${o['server']}|${o['server_port']}');
+      }
+    }
+    final sorted = entries.toList()..sort();
+    return sorted.join('\n');
+  } catch (_) {
+    return null;
+  }
+}
+
+/// True when the servers/ports differ; falls back to the raw comparison if either side is unparsable.
+@visibleForTesting
+bool configReachabilityChanged(String? before, String after) {
+  final a = configReachabilityFingerprint(before);
+  final b = configReachabilityFingerprint(after);
+  if (a == null || b == null) return before != after;
+  return a != b;
+}
+
 /// Force-updates the active profile and reconnects only if its stored config content changed.
 /// Returns whether it reconnected.
 Future<bool> refreshAndReconnectIfChanged({
@@ -124,7 +161,7 @@ Future<bool> refreshAndReconnectIfChanged({
   final before = await readStoredConfig();
   if (!await forceUpdate()) return false;
   final after = await readStoredConfig();
-  if (after == null || after == before) return false;
+  if (after == null || !configReachabilityChanged(before, after)) return false;
   await reconnect();
   return true;
 }

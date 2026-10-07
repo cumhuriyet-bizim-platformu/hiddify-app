@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiddify/features/connection/notifier/dead_tunnel_watcher.dart';
@@ -212,6 +213,52 @@ void main() {
         reconnect: () async => reconnects++,
       );
       expect(reconnects, 0);
+    });
+  });
+
+  group('refreshAndReconnectIfChanged normalised comparison', () {
+    String cfg({String ip = '1.2.3.4', String header = 'Linux', String sid = 'aa', bool extra = false}) => jsonEncode({
+      'outbounds': [
+        {
+          'type': 'vless',
+          'tag': 'x-$sid',
+          'server': ip,
+          'server_port': 443,
+          'headers': {'sec-ch-ua-platform': header},
+          'tls': {
+            'reality': {'short_id': sid},
+          },
+        },
+        if (extra) {'type': 'vless', 'tag': 'y', 'server': '5.6.7.8', 'server_port': 443},
+      ],
+    });
+
+    Future<int> run(String before, String after) async {
+      var stored = before;
+      var reconnects = 0;
+      await refreshAndReconnectIfChanged(
+        readStoredConfig: () async => stored,
+        forceUpdate: () async {
+          stored = after;
+          return true;
+        },
+        reconnect: () async => reconnects++,
+      );
+      return reconnects;
+    }
+
+    test('only header and short_id differ → no reconnect', () async {
+      expect(await run(cfg(), cfg(header: 'Windows', sid: 'bb')), 0);
+    });
+    test('different server IP → reconnect', () async {
+      expect(await run(cfg(), cfg(ip: '9.9.9.9')), 1);
+    });
+    test('added outbound → reconnect', () async {
+      expect(await run(cfg(), cfg(extra: true)), 1);
+    });
+    test('unparsable content → raw comparison', () async {
+      expect(await run('not json a', 'not json a'), 0);
+      expect(await run('not json a', 'not json b'), 1);
     });
   });
 }
