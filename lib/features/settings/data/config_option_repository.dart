@@ -96,7 +96,8 @@ abstract class ConfigOptions {
       "4.4.2.2",
       "8.8.8.8",
     ]),
-    defaultValueFunction: (ref) => ref.read(region) == Region.cn ? "223.5.5.5" : "1.1.1.1",
+    // Derbent: DoH to 1.1.1.1 outside China (plain UDP DNS is easy to tamper with); China keeps its value.
+    defaultValueFunction: (ref) => ref.read(region) == Region.cn ? "223.5.5.5" : "https://1.1.1.1/dns-query",
     validator: (value) => value.isNotBlank,
   );
 
@@ -142,11 +143,13 @@ abstract class ConfigOptions {
 
   static final connectionTestUrl = PreferencesNotifier.create<String, String>(
     "connection-test-url",
-    "http://captive.apple.com/hotspot-detect.html",
+    // Derbent: HTTPS test URL, not the plain-HTTP Apple captive portal.
+    "https://cp.cloudflare.com",
     possibleValues: List.of([
       "http://connectivitycheck.gstatic.com/generate_204",
       "http://www.gstatic.com/generate_204",
       "https://www.gstatic.com/generate_204",
+      "https://cp.cloudflare.com",
       "http://cp.cloudflare.com",
       "http://kernel.org",
       "http://detectportal.firefox.com",
@@ -159,7 +162,8 @@ abstract class ConfigOptions {
 
   static final urlTestInterval = PreferencesNotifier.create<Duration, int>(
     "url-test-interval",
-    const Duration(minutes: 10),
+    // Derbent: faster failover (was 10 minutes).
+    const Duration(seconds: 120),
     mapFrom: const IntervalInSecondsConverter().fromJson,
     mapTo: const IntervalInSecondsConverter().toJson,
   );

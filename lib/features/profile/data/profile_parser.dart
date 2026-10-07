@@ -33,6 +33,8 @@ class ProfileParser {
   static const allowedOverrideConfigs = [
     'connection-test-url',
     'direct-dns-address',
+    // Derbent: the panel pushes the failover interval (seconds, int; core DurationInSeconds).
+    'url-test-interval',
     'remote-dns-address',
     'warp',
     'warp2',
@@ -47,6 +49,10 @@ class ProfileParser {
     'profile-web-page-url',
     'enable-warp',
     'enable-fragment',
+    // Derbent: settings the panel pushes in subscription headers.
+    'url-test-interval',
+    'connection-test-url',
+    'direct-dns-address',
   ];
 
   final Ref _ref;
@@ -241,10 +247,11 @@ class ProfileParser {
     Map<String, dynamic>? remoteHeaders,
   }) => Either.tryCatch(() {
     final contentHeaders = _parseHeadersFromContent(content);
-    return _mergeAndValidateHeaders(contentHeaders, remoteHeaders ?? {});
+    return mergeAndValidateHeaders(contentHeaders, remoteHeaders ?? {});
   }, ProfileFailure.unexpected);
 
-  static Map<String, dynamic> _mergeAndValidateHeaders(
+  @visibleForTesting
+  static Map<String, dynamic> mergeAndValidateHeaders(
     Map<String, dynamic> contentHeaders,
     Map<String, dynamic> remoteHeaders,
   ) {
@@ -371,6 +378,17 @@ class ProfileParser {
           }
           if (headers['support-url'] case final String profileSupportUrl when isUrl(profileSupportUrl)) {
             subInfo = subInfo.copyWith(supportUrl: profileSupportUrl);
+          }
+        }
+
+        // Derbent: the core wants a number of seconds (DurationInSeconds), clamped to 60..3600;
+        // an unparsable value is dropped.
+        if (headers['url-test-interval'] case final raw?) {
+          final seconds = raw is num ? raw.toInt() : int.tryParse(raw.toString().trim());
+          if (seconds == null) {
+            headers.remove('url-test-interval');
+          } else {
+            headers['url-test-interval'] = seconds.clamp(60, 3600);
           }
         }
 
