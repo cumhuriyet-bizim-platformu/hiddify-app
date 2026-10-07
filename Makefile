@@ -281,7 +281,8 @@ android-aab-release:
 	  --build-target=$(TARGET) \
 	  --build-dart-define=release=google-play
 
-windows-release: windows-zip-release windows-exe-release windows-msix-release
+# Derbent: MSIX left out until there is a signing certificate (see build.yml).
+windows-release: windows-zip-release windows-exe-release
 
 windows-zip-release:
 	fastforge package \

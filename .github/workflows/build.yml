@@ -29,6 +29,9 @@ env:
   TARGET_NAME_exe: "Hiddify-Windows-Setup-x64"
   TARGET_NAME_msix: "Hiddify-Windows-x64"
   TARGET_NAME_zip: "Hiddify-Windows-Portable-x64"
+  # Derbent: sign Android and Windows builds only when the signing secrets exist; otherwise upload unsigned.
+  HAS_WINDOWS_SIGNING: "${{ secrets.WINDOWS_SIGNING_KEY != '' }}"
+  HAS_ANDROID_SIGNING: "${{ secrets.ANDROID_SIGNING_KEY != '' }}"
   TARGET_NAME_dmg: "Hiddify-MacOS"
   TARGET_NAME_pkg: "Hiddify-MacOS-Installer"
   TARGET_NAME_ipa: "Hiddify-iOS"
@@ -77,7 +80,9 @@ jobs:
           - platform: windows
             os: windows-latest
             aarch: amd64
-            targets: exe,msix,zip
+            # Derbent: no MSIX until we have a Windows signing certificate (fastforge refuses to
+            # package MSIX without certificate_password). The installer and portable zip need none.
+            targets: exe,zip
 
           # Derbent: only Android and Windows are built for now (owner decision 2026-10-07,
           # Actions minutes are limited). Re-enable linux/macos by uncommenting.
@@ -210,7 +215,7 @@ jobs:
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
       - name: Setup Android Signing Properties
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') && env.HAS_ANDROID_SIGNING == 'true' }}
         run: |
           echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 --decode > android/key.jks
           echo "storeFile=$(pwd)/android/key.jks" > android/key.properties
@@ -219,7 +224,7 @@ jobs:
           echo "keyAlias=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> android/key.properties
 
       - name: Setup Windows Signing Properties
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') && env.HAS_WINDOWS_SIGNING == 'true' }}
         run: |
             [IO.File]::WriteAllBytes("windows\sign.pfx", [Convert]::FromBase64String("${{ secrets.WINDOWS_SIGNING_KEY }}"))
             (Get-Content "windows\packaging\msix\make_config.yaml") -replace '^certificate_password:.*$', 'certificate_password: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}' | Set-Content "windows\packaging\msix\make_config.yaml"
@@ -267,7 +272,7 @@ jobs:
           make ${{ matrix.platform }}-release
 
       - name: Code Sign
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') && env.HAS_WINDOWS_SIGNING == 'true' }}
         uses: cumhuriyet-bizim-platformu/signtool-code-sign-sha256@edf131ad76c36ab1a9b468cdfa02acafd8a2a499 # forked from hiddify @ edf131ad, reviewed 2026-10-06
         with:
           certificate: '${{ secrets.WINDOWS_SIGNING_KEY }}'
