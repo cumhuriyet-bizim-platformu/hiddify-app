@@ -21,7 +21,9 @@ class InAppNotificationController with AppLogger {
   }) {
     toastification.dismissAll();
     return toastification.show(
-      title: Text(message),
+      // toastification caps the title at one line; longer messages (e.g. the notification-permission
+      // note) were cut off mid-sentence.
+      title: Text(message, maxLines: 4, overflow: TextOverflow.ellipsis),
       type: type._toastificationType,
       alignment: AlignmentDirectional.bottomStart,
       autoCloseDuration: duration,
