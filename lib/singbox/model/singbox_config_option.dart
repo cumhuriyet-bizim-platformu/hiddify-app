@@ -54,6 +54,10 @@ class SingboxConfigOption with _$SingboxConfigOption {
     required SingboxTlsTricks tlsTricks,
     required SingboxWarpOption warp,
     required SingboxWarpOption warp2,
+    // Derbent: whitelist/bypass routing (core fields, not overridable). Set only from the validated
+    // routing list on disk (applyRoutingOptions, after the profile override); null → omitted → full VPN.
+    @JsonKey(includeIfNull: false) String? derbentRoutingMode,
+    @JsonKey(includeIfNull: false) String? derbentRoutingRuleSet,
   }) = _SingboxConfigOption;
 
   String format() {

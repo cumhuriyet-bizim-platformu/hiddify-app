@@ -93,7 +93,11 @@
   "pages": {
     "home": {
       "title": "Home",
-      "quickSettings": "Quick settings"
+      "quickSettings": "Quick settings",
+      "routing": {
+        "whitelist": "Whitelist: $n sites via VPN, the rest direct",
+        "full": "Full VPN: $n services direct"
+      }
     },
     "proxies": {
       "title": "Proxies",

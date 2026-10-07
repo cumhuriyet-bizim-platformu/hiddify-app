@@ -93,7 +93,11 @@
   "pages": {
     "home": {
       "title": "Ana Sayfa",
-      "quickSettings": "Hızlı ayarlar"
+      "quickSettings": "Hızlı ayarlar",
+      "routing": {
+        "whitelist": "Beyaz liste: $n site VPN üzerinden, gerisi doğrudan",
+        "full": "Tam VPN: $n hizmet doğrudan"
+      }
     },
     "proxies": {
       "title": "Proxy'ler",

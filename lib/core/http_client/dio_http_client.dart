@@ -146,12 +146,21 @@ class DioHttpClient with InfraLogger {
     ({String username, String password})? credentials,
     bool proxyOnly = false,
     bool directRetry = false,
+    // Derbent: the routing list download refuses redirects (same host only) and caps its size.
+    bool followRedirects = true,
+    ProgressCallback? onReceiveProgress,
   }) async {
     assert(!(proxyOnly && directRetry), "a proxy-only request must never be retried directly");
     final mode = await _mode(proxyOnly);
-    final options = _options(url, userAgent: userAgent, credentials: credentials);
+    final options = _options(url, userAgent: userAgent, credentials: credentials)..followRedirects = followRedirects;
     try {
-      return await _dio[mode]!.download(url, path, cancelToken: cancelToken, options: options);
+      return await _dio[mode]!.download(
+        url,
+        path,
+        cancelToken: cancelToken,
+        options: options,
+        onReceiveProgress: onReceiveProgress,
+      );
     } catch (err) {
       // Derbent: one direct retry for a subscription fetch that failed with a network error while the
       // tunnel is up (every server may be blocked, and the new server list is exactly what we need).
@@ -159,7 +168,13 @@ class DioHttpClient with InfraLogger {
       // sub_link_only domain, so the ISP sees only that hostname over TLS.
       if (!directRetry || proxyOnly || mode == "direct" || !isNetworkError(err)) rethrow;
       loggy.warning("subscription fetch through the tunnel failed (${(err as DioException).type}), one direct retry");
-      return _dio["direct-once"]!.download(url, path, cancelToken: cancelToken, options: options);
+      return _dio["direct-once"]!.download(
+        url,
+        path,
+        cancelToken: cancelToken,
+        options: options,
+        onReceiveProgress: onReceiveProgress,
+      );
     }
   }
 

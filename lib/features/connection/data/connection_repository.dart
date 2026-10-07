@@ -5,6 +5,7 @@ import 'package:hiddify/core/utils/exception_handler.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
+import 'package:hiddify/features/profile/data/routing_list.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/notifier/warp_option/warp_option_notifier.dart';
@@ -101,7 +102,11 @@ class ConnectionRepositoryImpl with ExceptionHandler, InfraLogger implements Con
       TaskEither.fromEither(configOptionRepository.fullOptionsOverrided(prof.profileOverride))
           .mapLeft((l) => ConnectionFailure.invalidConfigOption(null, l))
           .flatMap(
-            (overridedOptions) => TaskEither.tryCatch(() async {
+            (overridden) => TaskEither.tryCatch(() async {
+              // Derbent: the routing mode and list path come only from the validated list on disk, set
+              // after the profile override so no override can change them. No list → full VPN.
+              final routing = await RoutingListStore(profilePathResolver.directory).current(prof.id);
+              final overridedOptions = applyRoutingOptions(overridden, routing);
               final isWarpLicenseAgreed = ref.read(warpLicenseNotifierProvider);
               final isWarpEnabled = overridedOptions.warp.enable || overridedOptions.warp2.enable;
               if (!isWarpLicenseAgreed && isWarpEnabled) {

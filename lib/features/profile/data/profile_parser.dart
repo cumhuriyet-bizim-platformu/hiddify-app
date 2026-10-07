@@ -53,6 +53,9 @@ class ProfileParser {
     'url-test-interval',
     'connection-test-url',
     'direct-dns-address',
+    // Derbent: `mode=...; url=...; sha256=...` for the routing list. Stored with the profile only; it
+    // is never an override (not in allowedOverrideConfigs): the list goes through RoutingListRefresher.
+    'derbent-routing',
   ];
 
   final Ref _ref;

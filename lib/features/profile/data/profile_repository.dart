@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +11,7 @@ import 'package:hiddify/features/profile/data/profile_data_mapper.dart';
 import 'package:hiddify/features/profile/data/profile_data_source.dart';
 import 'package:hiddify/features/profile/data/profile_parser.dart';
 import 'package:hiddify/features/profile/data/profile_path_resolver.dart';
+import 'package:hiddify/features/profile/data/routing_list.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/model/profile_failure.dart';
 import 'package:hiddify/features/profile/model/profile_sort_enum.dart';
@@ -43,7 +46,9 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
     required HiddifyCoreService singbox,
     required ConfigOptionRepository configOptionRepository,
     required ProfileParser profileParser,
-  }) : _profileParser = profileParser,
+    RoutingListRefresher? routingRefresher,
+  }) : _routingRefresher = routingRefresher,
+       _profileParser = profileParser,
        _configOptionRepo = configOptionRepository,
        _singbox = singbox,
        _profilePathResolver = profilePathResolver,
@@ -54,6 +59,7 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
   final HiddifyCoreService _singbox;
   final ConfigOptionRepository _configOptionRepo;
   final ProfileParser _profileParser;
+  final RoutingListRefresher? _routingRefresher;
 
   @override
   TaskEither<ProfileFailure, Unit> init() {
@@ -89,6 +95,7 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
     return TaskEither.tryCatch(() async {
       await _profileDataSource.deleteById(id, isActive);
       await _profilePathResolver.file(id).delete();
+      await _routingRefresher?.store.clear(id);
       return unit;
     }, ProfileUnexpectedFailure.new);
   }
@@ -142,8 +149,9 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
             return _profileParser
                 .updateRemote(rp: profEntity, tempFilePath: tempFile.path, cancelToken: cancelToken)
                 .flatMap(
-                  (profEntity) =>
-                      validateConfig(file.path, tempFile.path, profEntity.profileOverride.value, false).flatMap(
+                  (profEntity) => validateConfig(file.path, tempFile.path, profEntity.profileOverride.value, false)
+                      .flatMap((_) => _refreshRoutingList(id, url, profEntity))
+                      .flatMap(
                         (unit) => TaskEither.tryCatch(() async {
                           await _profileDataSource.edit(id, profEntity);
                           return unit;
@@ -161,8 +169,9 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
                   cancelToken: cancelToken,
                 )
                 .flatMap(
-                  (profEntity) =>
-                      validateConfig(file.path, tempFile.path, profEntity.profileOverride.value, false).flatMap(
+                  (profEntity) => validateConfig(file.path, tempFile.path, profEntity.profileOverride.value, false)
+                      .flatMap((_) => _refreshRoutingList(id, url, profEntity))
+                      .flatMap(
                         (unit) => TaskEither.tryCatch(() async {
                           await _profileDataSource.insert(profEntity);
                           return unit;
@@ -173,6 +182,25 @@ class ProfileRepositoryImpl with ExceptionHandler, InfraLogger implements Profil
         } finally {
           if (tempFile.existsSync()) tempFile.deleteSync();
         }
+      });
+
+  /// Derbent: download, validate and store the panel's routing list after a successful subscription
+  /// update, before the profile row is written (so the home status line re-reads the new list). Never
+  /// fails the update: any problem leaves no list (full VPN) or the previous one if its hash matches.
+  TaskEither<ProfileFailure, Unit> _refreshRoutingList(String id, String url, ProfileEntriesCompanion entry) =>
+      TaskEither(() async {
+        final refresher = _routingRefresher;
+        if (refresher == null) return right(unit);
+        try {
+          String? raw;
+          if (entry.populatedHeaders case Value(present: true, value: final String json)) {
+            if (jsonDecode(json) case {'derbent-routing': final String v}) raw = v;
+          }
+          await refresher.refresh(profileId: id, subscriptionUrl: Uri.parse(url.trim()), rawHeader: raw);
+        } catch (e, st) {
+          loggy.warning("routing list refresh failed; full VPN", e, st);
+        }
+        return right(unit);
       });
 
   @override
